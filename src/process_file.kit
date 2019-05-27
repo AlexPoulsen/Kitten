@@ -157,9 +157,11 @@ function findFiles(dir: DirectoryReader, path: CString, package: CString, subfol
                     var symlinkReturn: Int = 0;
                     if hasSubDir || kitFileCount > 1 {
                         printf("%s  >  %s\n", sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
+                        remove(sbPackageDir.returnWithString(d.d_name));
                         symlinkReturn = symlink(sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
                     } else {
                         printf("%s  >  %s\n", sbFile.toString(), sbPackageDirNoFolder.returnWithString(d.d_name));
+                        remove(sbPackageDirNoFolder.returnWithString(d.d_name));
                         symlinkReturn = symlink(sbFile.toString(), sbPackageDirNoFolder.returnWithString(d.d_name));
                     }
                     if symlinkReturn != 0 {
