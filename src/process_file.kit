@@ -1,0 +1,246 @@
+import kit.sys.file;
+import kit.sys.dir;
+import kitten.stringbuilder;
+include "jansson.h";
+include "errno.h";
+
+
+function main() {
+    process("arguments");
+}
+
+
+function process(package: CString) {
+    var base: CString = "/usr/local/lib/kit/kitten/_kitten_packages/";
+    var sb: StringBuilder = StringBuilder.newFromString(base);
+    sb.appendString(package);
+    var dir: DirectoryReader = DirectoryReader.new(sb.toString());
+    var fp: Ptr[FILE];
+    var lSize: Int64;
+    var buffer: Ptr[Char];
+    var kittenJSONexists: Bool = false;
+    var jsonData: Ptr[json_t];
+    var jsonError: json_error_t;
+    var dirVec: Vector[CString] = Vector.new();
+
+    for d in dir {
+        // if strcmp(d.d_name, "kitten.json") == 0 {
+        if d.d_name == "kitten.json" {
+            kittenJSONexists = true;
+        }
+        printf("%s\n", d.d_name);
+    }
+
+    if kittenJSONexists {
+        fp = fopen(sb.returnWithString("/kitten.json"), "rb");
+
+        // FIXME figure out `if !fp` exp.: Bool, act.: Ptr[__sFILE]
+        // if !fp {
+        //     perror(sb.returnWithString("/kitten.json does not exist!"));
+        //     exit(1);
+        // }
+
+        fseek(fp, 0, SEEK_END);
+        lSize = ftell(fp);
+        rewind(fp);
+
+        /* allocate memory for entire content */
+        buffer = calloc(1, lSize+1);
+        // FIXME figure out `if !buffer` exp.: Bool, act.: Ptr[Char]
+        // if !buffer {
+        //     fclose(fp);
+        //     fputs("memory alloc fails", stderr);
+        //     exit(1);
+        // }
+
+        /* copy the file into the buffer */
+        if 1 != fread(buffer, lSize, 1 , fp) {
+            fclose(fp);
+            free(buffer);
+            fputs("entire read fails", stderr);
+            exit(1);
+        }
+
+        /* do your work here, buffer is a string contains the whole text */
+        printf("%s\n", buffer);
+        jsonData = json_loads(buffer, 0, &jsonError);
+        // FIXME figure out `if !buffer` exp.: Bool, act.: Ptr[json_t]
+        // if(!jsonData)
+        // {
+        //     fprintf(stderr, "error: on line %d: %s\n", jsonError.line, jsonError.text);
+        //     return 1;
+        // }
+        fclose(fp);
+        free(buffer);
+        if jsonData.type == JSON_OBJECT {
+            var versions: Ptr[json_t] = json_object_get(jsonData, "versions");
+            if versions.type == JSON_ARRAY {
+                var versionsSize: Int = json_array_size(versions);
+                sb.appendString("/");
+                for ver in 0 ... versionsSize {
+                    var temp: Ptr[Char] = malloc(30 * sizeof(Char));  // otherwise this sometimes does not add the array element to the vector
+                    // printf("%s", json_string_value(json_array_get(versions, ver)));
+                    strcpy(temp, json_string_value(json_array_get(versions, ver)));
+                    dirVec.push(temp);
+                }
+                dirVec.push("src");
+                json_decref(jsonData);
+            } else {
+                printf("Error: no versions array");
+                json_decref(jsonData);
+                return 1;
+            }
+        } else {
+            printf("Error: malformed kitten.json");
+            json_decref(jsonData);
+            return 1;
+        }
+        json_decref(jsonData);
+    }
+    var verPath: CString;
+    for ver in dirVec {
+        var errno;
+        verPath = sb.returnWithString(ver);
+        printf("%s\n", verPath);
+        dir = DirectoryReader.new(verPath);
+        if (ENOENT == errno) {
+            errno = 0;
+            printf("-- Error: directory does not exist.\n");
+        } else {
+            findFiles(dir, verPath, package, "");
+        }
+    }
+    return 0;
+}
+
+
+function findFiles(dir: DirectoryReader, path: CString, package: CString, subfolder: CString): Void {
+    // printf("%s\n", path);
+    var packageDir: CString = "/usr/local/lib/kit/kitten/";
+    var sbPackageDir: StringBuilder = StringBuilder.newFromString(packageDir);
+    sbPackageDir.appendString(package);
+    sbPackageDir.appendString("/");
+    sbPackageDir.appendString(subfolder);
+    mkdir(sbPackageDir.toString(), 0o777);
+    for d in dir {
+        if strstr(d.d_name, ".") != null {
+            var afterDot: Ptr[Char] = strrchr(d.d_name, c'.');
+            if afterDot != null {
+                if strcmp(afterDot, ".kit") == 0 {
+                    printf("-- %s\n", d.d_name);
+                    var sbFile: StringBuilder = StringBuilder.newFromString(path);
+                    sbFile.appendString("/");
+                    sbFile.appendString(d.d_name);
+                    replaceLocalImports(sbFile.toString(), package);
+                    printf("%s  >  %s\n", sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
+                    var errno: Int;
+                    if symlink(sbFile.toString(), sbPackageDir.returnWithString(d.d_name)) != 0 {
+                        if errno == EEXIST {
+                            printf("symlink exists\n");
+                        }
+                        // printf("%d\n", errno);
+                        // printf("%d\n", EACCES);
+                        // printf("%d\n", EEXIST);
+                        // printf("%d\n", EIO);
+                        // printf("%d\n", ELOOP);
+                        // printf("%d\n", ENAMETOOLONG);
+                        // printf("%d\n", ENOENT);
+                        // printf("%d\n", ENOSPC);
+                        // printf("%d\n", ENOTDIR);
+                        // printf("%d\n", EROFS);
+                        // printf("%d\n", ELOOP);
+                        // printf("%d\n", ENAMETOOLONG);
+                        errno = 0;
+                    }
+                }
+            }
+            // printf("%s\n", d.d_name);
+        } else {
+            printf("- entering dir %s\n", d.d_name);
+            var sbNew: StringBuilder = StringBuilder.newFromString(path);
+            sbNew.appendString("/");
+            sbNew.appendString(d.d_name);
+            var sbSubfolder: StringBuilder = StringBuilder.newFromString(subfolder);
+            sbSubfolder.appendString("/");
+            sbSubfolder.appendString(d.d_name);
+            findFiles(DirectoryReader.new(sbNew.toString()), sbNew.toString(), package, sbSubfolder.toString());
+        }
+    }
+}
+
+
+function strAdd(one: CString, two: CString): CString {
+    var out = malloc(one.length + two.length + 1);
+    strcpy(out, one);
+    strcat(out, two);
+    return out;
+}
+
+
+function replaceLocalImports(filename: CString, package: CString): Void {
+    rename(filename, strAdd(filename, "_old"));
+    var file: Ptr[__sFILE] = fopen(strAdd(filename, "_old"), "r");
+    var newfile: Ptr[__sFILE] = fopen(filename, "w");
+    if file == null {
+        perror("Error opening file");
+        printf("%s\n", filename);
+    } else {
+        /* assume line is a char array */
+        var line: CArray[Char, 2048];
+        while fgets(line, sizeof(CArray[Char, 2048]), file) != null {
+            // var len = strlen(line);
+            // if len != 0 && (line[len - 1] != c'\n') {
+            //     printf("%s", line);
+            // }
+            // printf("%s", line);
+            if strstr(line, "import") != null {
+                if strstr(line, "kit.") != null {
+                    printf("kit:    %s", line);
+                    fprintf(newfile, "%s", line);
+                    // fwrite(line, sizeof(CString) * line.length, 1, newfile);
+                } else if strstr(line, "kitten.") != null {
+                    printf("kitten: %s", line);
+                    fprintf(newfile, "%s", line);
+                    // fwrite(line, sizeof(CString) * line.length, 1, newfile);
+                } else {
+                    printf("local:  %s", line);
+                    var newImport: StringBuilder = StringBuilder.newFromString("import ");
+                    newImport.appendString("kitten.");
+                    newImport.appendString(package);
+                    newImport.appendString(".");
+                    var length: Int;
+                    var i: Int = 0;
+                    while line[i++] != c'\n' {
+                        length++;
+                    }
+                    // var lineCopy: Ptr[Char] = *(malloc((length + 1) * sizeof(Char))): Ptr[Char];
+                    // strcpy(lineCopy, line);
+                    newImport.appendCharPtr(subString(line, 7, length - 1), length);
+                    printf("new:    %s\n", newImport.toString());
+                    fprintf(newfile, "%s", newImport.toString());
+                    // fwrite(newImport.toString(), sizeof(CString) * newImport.toString().length, 1, newfile);
+                }
+            } else {
+                fprintf(newfile, "%s", line);
+                // fwrite(line, sizeof(CString) * line.length, 1, newfile);
+            }
+        }
+        fclose(file);
+        fclose(newfile);
+    }
+    remove(strAdd(filename, "_old"));
+}
+
+
+function subString(input: Ptr[Char], offset: Int, len: Int): Ptr[Char] {
+    var input_len: Int = strlen(input);
+    var dest: Ptr[Char] = *(malloc((input_len - offset + 1) * sizeof(Char))): Ptr[Char];
+
+    if offset + len > input_len {
+        len = input_len - offset;
+    }
+
+    strncpy(dest, input + offset, len);
+    dest[len] = "\x00"[0];
+    return dest;
+}
