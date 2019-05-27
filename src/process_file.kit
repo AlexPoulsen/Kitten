@@ -213,7 +213,7 @@ function replaceLocalImports(filename: CString, package: CString): Void {
     // printf("oldfile: %s\n", strAdd(filename, "_old"));
     // printf("newfile: %s\n", filename);
     var newfile: Ptr[__sFILE] = fopen(filename, "w");
-    if file == null {
+    if (file == null) or (newfile == null) {
         perror("Error opening file");
         printf("%s\n", filename);
     } else {
