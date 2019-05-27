@@ -6,7 +6,7 @@ include "errno.h";
 
 
 function main() {
-    process("arguments");
+    process("test");
 }
 
 
@@ -118,10 +118,31 @@ function findFiles(dir: DirectoryReader, path: CString, package: CString, subfol
     // printf("%s\n", path);
     var packageDir: CString = "/usr/local/lib/kit/kitten/";
     var sbPackageDir: StringBuilder = StringBuilder.newFromString(packageDir);
+    var sbPackageDirNoFolder: StringBuilder = StringBuilder.newFromString(packageDir);
     sbPackageDir.appendString(package);
     sbPackageDir.appendString("/");
-    sbPackageDir.appendString(subfolder);
-    mkdir(sbPackageDir.toString(), 0o777);
+    if strcmp(subfolder, "") != 0 {
+        sbPackageDir.appendString(subfolder);
+        sbPackageDir.appendString("/");
+    }
+    var kitFileCount: Int = 0;
+    var hasSubDir: Bool = false;
+    var dir2: DirectoryReader = DirectoryReader.new(path);
+    for d in dir2 {
+        if strstr(d.d_name, ".") != null {
+            var afterDot: Ptr[Char] = strrchr(d.d_name, c'.');
+            if afterDot != null {
+                if strcmp(afterDot, ".kit") == 0 {
+                    kitFileCount++;
+                }
+            }
+        } else {
+            hasSubDir = true;
+        }
+    }
+    if hasSubDir || kitFileCount > 1 {
+        mkdir(sbPackageDir.toString(), 0o777);
+    }
     for d in dir {
         if strstr(d.d_name, ".") != null {
             var afterDot: Ptr[Char] = strrchr(d.d_name, c'.');
@@ -132,9 +153,16 @@ function findFiles(dir: DirectoryReader, path: CString, package: CString, subfol
                     sbFile.appendString("/");
                     sbFile.appendString(d.d_name);
                     replaceLocalImports(sbFile.toString(), package);
-                    printf("%s  >  %s\n", sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
                     var errno: Int;
-                    if symlink(sbFile.toString(), sbPackageDir.returnWithString(d.d_name)) != 0 {
+                    var symlinkReturn: Int = 0;
+                    if hasSubDir || kitFileCount > 1 {
+                        printf("%s  >  %s\n", sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
+                        symlinkReturn = symlink(sbFile.toString(), sbPackageDir.returnWithString(d.d_name));
+                    } else {
+                        printf("%s  >  %s\n", sbFile.toString(), sbPackageDirNoFolder.returnWithString(d.d_name));
+                        symlinkReturn = symlink(sbFile.toString(), sbPackageDirNoFolder.returnWithString(d.d_name));
+                    }
+                    if symlinkReturn != 0 {
                         if errno == EEXIST {
                             printf("symlink exists\n");
                         }
@@ -180,6 +208,8 @@ function strAdd(one: CString, two: CString): CString {
 function replaceLocalImports(filename: CString, package: CString): Void {
     rename(filename, strAdd(filename, "_old"));
     var file: Ptr[__sFILE] = fopen(strAdd(filename, "_old"), "r");
+    // printf("oldfile: %s\n", strAdd(filename, "_old"));
+    // printf("newfile: %s\n", filename);
     var newfile: Ptr[__sFILE] = fopen(filename, "w");
     if file == null {
         perror("Error opening file");
