@@ -1,4 +1,3 @@
-# Kitten
-A package manager for [Kit](https://www.kitlang.org)
+<img src="kitten logo.png" alt="kitten.png" width="300"/>
 
-<img src="kitten.png" alt="kitten.png" width="150"/>
+A package manager for [Kit](https://www.kitlang.org)
