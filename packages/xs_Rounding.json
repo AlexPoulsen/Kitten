@@ -1,9 +1,0 @@
-{
-  "name": "xs_Rounding",
-  "id": "sree_kotay.xs_rounding",
-  "versions": ["1.0.0"],
-  "author": "Sree Kotay",
-  "porting author": "Alix Poulsen",
-  "original_web_link": "http://stereopsis.com/sree/fpu2006.html",
-  "github_link": "https://github.com/AlexPoulsen/xs_Rounding-Kit-port"
-}
