@@ -1,0 +1,7 @@
+{
+  "name": "stringbuilder",
+  "id": "alix.stringbuilder",
+  "versions": ["1.0.0"],
+  "author": ["Alix Poulsen", "Tyler Bezera"],
+  "github_link": "https://github.com/AlexPoulsen/stringbuilder"
+}

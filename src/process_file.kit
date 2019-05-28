@@ -217,23 +217,15 @@ function replaceLocalImports(filename: CString, package: CString): Void {
         perror("Error opening file");
         printf("%s\n", filename);
     } else {
-        /* assume line is a char array */
         var line: CArray[Char, 2048];
         while fgets(line, sizeof(CArray[Char, 2048]), file) != null {
-            // var len = strlen(line);
-            // if len != 0 && (line[len - 1] != c'\n') {
-            //     printf("%s", line);
-            // }
-            // printf("%s", line);
             if strstr(line, "import") != null {
                 if strstr(line, "kit.") != null {
                     printf("kit:    %s", line);
                     fprintf(newfile, "%s", line);
-                    // fwrite(line, sizeof(CString) * line.length, 1, newfile);
                 } else if strstr(line, "kitten.") != null {
                     printf("kitten: %s", line);
                     fprintf(newfile, "%s", line);
-                    // fwrite(line, sizeof(CString) * line.length, 1, newfile);
                 } else {
                     printf("local:  %s", line);
                     var newImport: StringBuilder = StringBuilder.newFromString("import ");
@@ -245,16 +237,12 @@ function replaceLocalImports(filename: CString, package: CString): Void {
                     while line[i++] != c'\n' {
                         length++;
                     }
-                    // var lineCopy: Ptr[Char] = *(malloc((length + 1) * sizeof(Char))): Ptr[Char];
-                    // strcpy(lineCopy, line);
                     newImport.appendCharPtr(subString(line, 7, length - 1), length);
                     printf("new:    %s\n", newImport.toString());
                     fprintf(newfile, "%s", newImport.toString());
-                    // fwrite(newImport.toString(), sizeof(CString) * newImport.toString().length, 1, newfile);
                 }
             } else {
                 fprintf(newfile, "%s", line);
-                // fwrite(line, sizeof(CString) * line.length, 1, newfile);
             }
         }
         fclose(file);
