@@ -3,6 +3,9 @@ import kit.sys.dir;
 import kitten.stringbuilder;
 include "jansson.h";
 include "errno.h";
+include "unistd.h";
+include "sys/types.h";
+include "sys/stat.h";
 
 
 function main() {
@@ -80,7 +83,7 @@ function process(package: CString) {
                 for ver in 0 ... versionsSize {
                     var temp: Ptr[Char] = malloc(30 * sizeof(Char));  // otherwise this sometimes does not add the array element to the vector
                     // printf("%s", json_string_value(json_array_get(versions, ver)));
-                    strcpy(temp, json_string_value(json_array_get(versions, ver)));
+                    strcpy(temp, json_string_value(json_object_get(json_array_get(versions, ver), "ver")));
                     dirVec.push(temp);
                 }
                 dirVec.push("src");
@@ -213,7 +216,7 @@ function replaceLocalImports(filename: CString, package: CString): Void {
     // printf("oldfile: %s\n", strAdd(filename, "_old"));
     // printf("newfile: %s\n", filename);
     var newfile: Ptr[__sFILE] = fopen(filename, "w");
-    if (file == null) or (newfile == null) {
+    if (file == null) || (newfile == null) {
         perror("Error opening file");
         printf("%s\n", filename);
     } else {
