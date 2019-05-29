@@ -9,7 +9,7 @@ include "sys/stat.h";
 
 
 function main() {
-    process("test");
+    process("arguments");
 }
 
 
@@ -17,6 +17,22 @@ function process(package: CString) {
     var base: CString = "/usr/local/lib/kit/kitten/_kitten_packages/";
     var sb: StringBuilder = StringBuilder.newFromString(base);
     sb.appendString(package);
+    var errno;
+    var dirCheck: Ptr[DIR] = opendir(sb.toString());
+    if dirCheck == null {
+        if errno == ENOTDIR {
+            perror("`package` is not a directory");
+            exit(1);
+        } else if errno == ENOENT {
+            perror("`package` directory does not exist");
+            exit(1);
+        } else {
+            perror("other error with `package` directory");
+            exit(1);
+        }
+    } else {
+        closedir(dirCheck);
+    }
     var dir: DirectoryReader = DirectoryReader.new(sb.toString());
     var fp: Ptr[FILE];
     var lSize: Int64;
