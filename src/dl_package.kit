@@ -1,8 +1,10 @@
 include "limits.h";
+include "unistd.h";
 
 
 function main() {
     init();
+    updatePackages();
 }
 
 function init() {
@@ -13,8 +15,8 @@ function init() {
 }
 
 function updatePackages() {
-    var cwd: CArray[Char, PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != null) {
+    var cwd: Ptr[Char] = malloc(${PATH_MAX: Int} * sizeof(Char));
+    if (getcwd(cwd, ${PATH_MAX: Int} * sizeof(Char)) != null) {
         chdir("/usr/local/lib/kit/kitten/_kitten_json_dir/");
         system("git pull");
         chdir(cwd);
