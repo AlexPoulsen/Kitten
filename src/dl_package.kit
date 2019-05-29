@@ -1,0 +1,24 @@
+include "limits.h";
+
+
+function main() {
+    init();
+}
+
+function init() {
+    system("git -C /usr/local/lib/kit/kitten/_kitten_json_dir clone https://github.com/AlexPoulsen/Kitten-packages.git");
+    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/* /usr/local/lib/kit/kitten/_kitten_json_dir");
+    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/.* /usr/local/lib/kit/kitten/_kitten_json_dir");
+    rmdir("/usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/");
+}
+
+function updatePackages() {
+    var cwd: CArray[Char, PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != null) {
+        chdir("/usr/local/lib/kit/kitten/_kitten_json_dir/");
+        system("git pull");
+        chdir(cwd);
+    } else {
+        perror("getcwd() error");
+    }
+}
