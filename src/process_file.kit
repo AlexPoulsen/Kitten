@@ -47,7 +47,7 @@ function process(package: CString) {
         if d.d_name == "kitten.json" {
             kittenJSONexists = true;
         }
-        printf("%s\n", d.d_name);
+        // printf("%s\n", d.d_name);
     }
 
     if kittenJSONexists {
@@ -81,7 +81,7 @@ function process(package: CString) {
         }
 
         /* do your work here, buffer is a string contains the whole text */
-        printf("%s\n", buffer);
+        // printf("%s\n", buffer);
         jsonData = json_loads(buffer, 0, &jsonError);
         // FIXME figure out `if !buffer` exp.: Bool, act.: Ptr[json_t]
         // if(!jsonData)
