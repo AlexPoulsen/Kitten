@@ -1,0 +1,498 @@
+/**
+ * An StringBuilder implementation in kit.
+ * @author Tyler Bezera
+ * @author Alex Poulsen
+ */
+
+import xs_Rounding;
+include "math.h";
+
+var _minSizePreDoubling: Int = 10;
+
+/**
+ * Not necessarily needed for the StringBuilder, but it's a useful function that works well for appending strings in a situation where a StringBuilder is not necessary
+ */
+function strAdd(one: CString, two: CString): CString {
+    var out = malloc(one.length + two.length + 1);
+    strcpy(out, one);
+    strcat(out, two);
+    return out;
+}
+
+function repeatChar(what: Char, times: Int) {
+    var out: Ptr[Char] = *(malloc(times)): Ptr[Char];
+    for n in 0 ... times {
+        strncat(out, what, 1);
+    }
+    return out;
+    // printf("\"%s\"", out);
+}
+
+
+enum BoolMode {
+    TRUE_FALSE;
+    T_F;
+    T1_F0;
+    ON_OFF;
+}
+
+enum BoolCap {
+    LOWER;
+    UPPER;
+    TITLE;
+}
+
+
+struct StringBuilder {
+    private var chars: Ptr[Char];
+    private var length: Int;
+    private var allocated: Int;
+
+
+    // =========================================================================
+    // creation functions
+    // =========================================================================
+
+
+    public static function new(size: Int = 0): StringBuilder {
+        size = xs_MaxInt(size, _minSizePreDoubling * 2);
+        return struct Self {
+            chars: *(malloc(20 * sizeof(Char))): Ptr[Char],
+            length: 0,
+            allocated: size
+        };
+    }
+
+    public static function newFromCopy(initialize: StringBuilder): StringBuilder {
+        var newChars: Ptr[Char] = *(malloc(initialize.allocated * sizeof(Char))): Ptr[Char];
+        strcpy(newChars, initialize.chars);
+        return struct Self {
+            chars: newChars,
+            length: initialize.length,
+            allocated: initialize.allocated
+        };
+    }
+
+    public static function newFromString(initialize: CString, size: Int = 0): StringBuilder {
+        var initSize: Int = _minSizePreDoubling;
+        initSize = xs_MaxInt(initialize.length, initSize) * 2;
+        initSize = xs_MaxInt(size, initSize);
+        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        strcpy(initChars, initialize);
+        return struct Self {
+            chars: initChars,
+            length: initialize.length,
+            allocated: initSize
+        };
+    }
+
+    public static function newFromCharPtr(initialize: Ptr[Char], size: Int): StringBuilder {
+        var initSize: Int = _minSizePreDoubling;
+        initSize = xs_MaxInt(size, initSize) * 2;
+        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        strcpy(initChars, initialize);
+        return struct Self {
+            chars: initChars,
+            length: size,
+            allocated: initSize
+        };
+    }
+
+    public static function newFromCharArray(initialize: CArray[Char], size: Int = 0): StringBuilder {
+        var initSize: Int = _minSizePreDoubling;
+        initSize = xs_MaxInt(initialize.length, initSize) * 2;
+        initSize = xs_MaxInt(size, initSize);
+        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        strcpy(initChars, initialize);
+        return struct Self {
+            chars: initChars,
+            length: initialize.length,
+            allocated: initSize
+        };
+    }
+
+    public static function newFromInt(initialize: Int, size: Int = 0): StringBuilder {
+        var numSize: Int = xs_CeilToInt(log10(initialize: Float64));  // for numbers like 1000000000, it will report the length as one less than it is. this is fixed by multiplying the initSize by 2.
+        var initSize: Int = _minSizePreDoubling;
+        initSize = xs_MaxInt(numSize, initSize) * 2;
+        initSize = xs_MaxInt(size, initSize);
+        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        sprintf(initChars,"%d", initialize);
+        return struct Self {
+            chars: initChars,
+            length: numSize,
+            allocated: initSize
+        };
+    }
+
+    public static function newFromFloat(initialize: Float, size: Int = -1): StringBuilder {
+        var initializeAboveDecimal: Float64 = xs_FloorToInt(initialize);
+        var aboveDecimalSize: Int = xs_CeilToInt(log10(initializeAboveDecimal)) + 1;  // for numbers like 1000000000, it will report the length as one less than it is. this is fixed by multiplying the initSize by 2.
+        if size == -1 {
+            size = aboveDecimalSize;
+        }
+        var cacheSize: Int = size;
+        var initSize: Int = _minSizePreDoubling;
+        size = xs_MaxInt(aboveDecimalSize, size);
+        initSize = (xs_MaxInt(size + 1, initSize) * 2) + 2;
+        var initChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
+        var initCharsTemp: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        sprintf(initCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), initialize);
+        // strncpy(initChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
+        // strncpy(initChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
+        strncpy(initChars, initCharsTemp, xs_MaxInt(cacheSize - 1, 1));
+        return struct Self {
+            chars: initChars,
+            length: xs_MaxInt(cacheSize, 1),
+            allocated: (cacheSize * 2 + 1)
+        };
+    }
+
+    public static function newFromBool(initialize: Bool, mode: BoolMode = BoolMode.TRUE_FALSE, capitalization: BoolCap = BoolCap.LOWER, size: Int = 10): StringBuilder {
+        var t: CString = "-";
+        var f: CString = "-";
+        match mode {
+            TRUE_FALSE  => {
+                            match capitalization {
+                                LOWER => {t = "true"; f = "false";}
+                                UPPER => {t = "TRUE"; f = "FALSE";}
+                                TITLE => {t = "True"; f = "False";}
+                            }}
+            T_F         => {
+                            match capitalization {
+                                LOWER => {t = "t"; f = "f";}
+                                UPPER => {t = "T"; f = "F";}
+                                TITLE => {t = "T"; f = "F";}
+                            }}
+            T1_F0       => {t = "1"; f = "0";}
+            ON_OFF      => {
+                            match capitalization {
+                                LOWER => {t = "on"; f = "off";}
+                                UPPER => {t = "ON"; f = "OFF";}
+                                TITLE => {t = "On"; f = "Off";}
+                            }}
+        }
+        return Self.newFromString(if initialize then t else f, size);
+    }
+
+
+    // =========================================================================
+    // append functions
+    // =========================================================================
+
+
+    public function appendString(append: CString): StringBuilder {
+        this.ensureSpace(append.length);
+        strcat(this.chars, append);
+        this.length += append.length;
+        return this;
+    }
+
+    public function appendCharPtr(append: Ptr[Char], size: Int): StringBuilder {
+        this.ensureSpace(size);
+        strncat(this.chars, append, size);
+        this.length += size;
+        return this;
+    }
+
+    public function appendCharArray(append: CArray[Char], size: Int): StringBuilder {
+        this.ensureSpace(size);
+        strncat(this.chars, append, size);
+        this.length += size;
+        return this;
+    }
+
+    public function appendInt(append: Int): StringBuilder {
+        var numSize: Int = xs_CeilToInt(log10(append: Float64)) + 1;  // for numbers like 1000000000, log10 will report the length as one less than it is.
+        var appendChars: Ptr[Char] = *(malloc(numSize * sizeof(Char))): Ptr[Char];
+        sprintf(appendChars,"%d", append);
+        this.ensureSpace(numSize);
+        strcat(this.chars, appendChars);
+        this.length += numSize;
+        return this;
+    }
+
+    public function appendFloat(append: Float, size: Int = -1): StringBuilder {
+        var appendAboveDecimal: Float64 = xs_FloorToInt(append);
+        var aboveDecimalSize: Int = xs_CeilToInt(log10(appendAboveDecimal)) + 1;  // for numbers like 1000000000, it will report the length as one less than it is. this is fixed by multiplying the initSize by 2.
+        if size < 0 {
+            size = aboveDecimalSize;
+        } else {
+            size += 1;
+        }
+        var cacheSize: Int = size;
+        var appendSize: Int = _minSizePreDoubling;
+        size = xs_MaxInt(aboveDecimalSize, size);
+        appendSize = (xs_MaxInt(size + 1, appendSize) * 2) + 2;
+        var appendChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
+        var appendCharsTemp: Ptr[Char] = *(malloc(appendSize * sizeof(Char))): Ptr[Char];
+        sprintf(appendCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), append);
+        // strncpy(appendChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
+        // strncpy(appendChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
+        strncpy(appendChars, appendCharsTemp, xs_MaxInt(cacheSize - 1, 1));
+        this.ensureSpace(xs_MaxInt(cacheSize, 1));
+        strcat(this.chars, appendChars);
+        this.length += xs_MaxInt(cacheSize, 1);
+        return this;
+    }
+
+    public function appendBool(initialize: Bool, mode: BoolMode = BoolMode.TRUE_FALSE, capitalization: BoolCap = BoolCap.LOWER): StringBuilder {
+        var t: CString = "-";
+        var f: CString = "-";
+        match mode {
+            TRUE_FALSE  => {
+                            match capitalization {
+                                LOWER => {t = "true"; f = "false";}
+                                UPPER => {t = "TRUE"; f = "FALSE";}
+                                TITLE => {t = "True"; f = "False";}
+                            }}
+            T_F         => {
+                            match capitalization {
+                                LOWER => {t = "t"; f = "f";}
+                                UPPER => {t = "T"; f = "F";}
+                                TITLE => {t = "T"; f = "F";}
+                            }}
+            T1_F0       => {t = "1"; f = "0";}
+            ON_OFF      => {
+                            match capitalization {
+                                LOWER => {t = "on"; f = "off";}
+                                UPPER => {t = "ON"; f = "OFF";}
+                                TITLE => {t = "On"; f = "Off";}
+                            }}
+        }
+        return this.appendString(if initialize then t else f);
+    }
+
+    public function appendFromCopy(initialize: StringBuilder): StringBuilder {
+        return this.appendCharPtr(initialize.chars, initialize.length);
+    }
+
+
+    // =========================================================================
+    // output functions
+    // =========================================================================
+
+
+    public function printLengthAndAllocated(): Void {
+        printf("length: %d\n", this.length);
+        printf("allocated: %d\n", this.allocated);
+    }
+
+    public function toString(): CString {
+        var out: CString = malloc((this.length + 1) * sizeof(CString));
+        strcpy(out, this.chars);
+        return out;
+    }
+
+    public function makeCopy(): StringBuilder {
+        var copyChars: Ptr[Char] = *(malloc(this.allocated * sizeof(Char))): Ptr[Char];
+        strcpy(copyChars, this.chars);
+        return struct Self {
+            chars: copyChars,
+            length: this.length,
+            allocated: this.allocated
+        };
+    }
+
+    public function returnWithString(append: CString): CString {
+        var out: CString = malloc((this.length + append.length + 1) * sizeof(CString));
+        strcpy(out, this.chars);
+        strcat(out, append);
+        return out;
+    }
+
+    public function returnWithCharPtr(append: Ptr[Char], size: Int): CString {
+        var out: CString = malloc((this.length + size + 1) * sizeof(CString));
+        strcpy(out, this.chars);
+        strncat(out, append, size);
+        return out;
+    }
+
+    public function returnWithCharArray(append: CArray[Char], size: Int): CString {
+        var out: CString = malloc((this.length + size + 1) * sizeof(CString));
+        strcpy(out, this.chars);
+        strncat(out, append, size);
+        return out;
+    }
+
+    public function returnWithInt(append: Int): CString {
+        var numSize: Int = xs_CeilToInt(log10(append: Float64)) + 1;  // for numbers like 1000000000, log10 will report the length as one less than it is.
+        var appendChars: Ptr[Char] = *(malloc(numSize * sizeof(Char))): Ptr[Char];
+        sprintf(appendChars,"%d", append);
+        return this.returnWithString(appendChars);
+    }
+
+    public function returnWithFloat(append: Float, size: Int = -1): CString {
+        var appendAboveDecimal: Float64 = xs_FloorToInt(append);
+        var aboveDecimalSize: Int = xs_CeilToInt(log10(appendAboveDecimal)) + 1;  // for numbers like 1000000000, it will report the length as one less than it is. this is fixed by multiplying the initSize by 2.
+        if size < 0 {
+            size = aboveDecimalSize;
+        } else {
+            size += 1;
+        }
+        var cacheSize: Int = size;
+        var appendSize: Int = _minSizePreDoubling;
+        size = xs_MaxInt(aboveDecimalSize, size);
+        appendSize = (xs_MaxInt(size + 1, appendSize) * 2) + 2;
+        var appendChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
+        var appendCharsTemp: Ptr[Char] = *(malloc(appendSize * sizeof(Char))): Ptr[Char];
+        sprintf(appendCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), append);
+        // strncpy(appendChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
+        // strncpy(appendChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
+        strncpy(appendChars, appendCharsTemp, xs_MaxInt(cacheSize - 1, 1));
+        return this.returnWithString(appendChars);
+    }
+
+    public function returnWithBool(initialize: Bool, mode: BoolMode = BoolMode.TRUE_FALSE, capitalization: BoolCap = BoolCap.LOWER): CString {
+        var t: CString = "-";
+        var f: CString = "-";
+        match mode {
+            TRUE_FALSE  => {
+                            match capitalization {
+                                LOWER => {t = "true"; f = "false";}
+                                UPPER => {t = "TRUE"; f = "FALSE";}
+                                TITLE => {t = "True"; f = "False";}
+                            }}
+            T_F         => {
+                            match capitalization {
+                                LOWER => {t = "t"; f = "f";}
+                                UPPER => {t = "T"; f = "F";}
+                                TITLE => {t = "T"; f = "F";}
+                            }}
+            T1_F0       => {t = "1"; f = "0";}
+            ON_OFF      => {
+                            match capitalization {
+                                LOWER => {t = "on"; f = "off";}
+                                UPPER => {t = "ON"; f = "OFF";}
+                                TITLE => {t = "On"; f = "Off";}
+                            }}
+        }
+        return this.returnWithString(if initialize then t else f);
+    }
+
+    public function returnWithCopy(initialize: StringBuilder): CString {
+        return this.returnWithCharPtr(initialize.chars, initialize.length);
+    }
+
+
+    // =========================================================================
+    // helper functions
+    // =========================================================================
+
+
+    public function ensureSpace(addLen: Int): Void {
+        if addLen == 0 {
+            return;
+        }
+        if (this.allocated >= this.length + addLen + 1) {
+            return;
+        }
+        var stopIter = 0;
+        while (this.allocated < this.length + addLen + 1) {
+            /* Doubling growth strategy. */
+            this.allocated <<= 1;
+            if (this.allocated == 0) {
+                /* Left shift of max bits will go to 0. An unsigned type set to
+                * -1 will return the maximum possible size. However, we should
+                *  have run out of memory well before we need to do this. Since
+                *  this is the theoretical maximum total system memory we don't
+                *  have a flag saying we can't grow any more because it should
+                *  be impossible to get to this point. */
+                this.allocated--;
+            }
+            if stopIter >= 150 {
+                break;
+            }
+            stopIter++;
+        }
+        this.chars = realloc(this.chars, this.allocated);
+        this.allocated = this.allocated + addLen;
+    }
+
+
+    // =========================================================================
+    // other functions
+    // =========================================================================
+
+
+    public function endsWith(c: Char) {
+        var offset: Int = 0;
+        var hasPreceedingNull: Bool = false;
+        // printf("[");
+        for n in 0 ... this.length {
+            var checkChar: Char = this.chars[this.length - n];
+            // printf("(%c %d) ", checkChar, checkChar);
+            if (checkChar == "\x00"[0]) {
+                hasPreceedingNull = true;
+            }
+            if (checkChar != "\x00"[0]) {
+                offset = n;
+                if hasPreceedingNull {
+                    break;
+                }
+            }
+        }
+        // printf("]\n");
+        // printf("(%c == %c) ", this.chars[this.length - offset], c);
+        return this.chars[this.length - offset] == c;
+    }
+}
+
+function main(): Void {
+    checkEndianness();
+    // var builder = StringBuilder.newFromString("hello world!");
+    var builder = StringBuilder.newFromBool(true);
+    // var builder = StringBuilder.newFromInt(479235634);
+    // var builder = StringBuilder.newFromFloat(2385.2463573_f64, n);
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    var cp: Ptr[Char] = "abc 123";
+    var ca: CArray[Char, 7];
+    strcpy(ca, "lol hi");
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendCharPtr(cp, 7);
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendCharArray(ca, 6);
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendFloat(1.5326, 6);
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    // builder.ensureSpace(32);
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendString(" -");
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendBool(false, BoolMode.T_F, BoolCap.UPPER);
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendInt(426).appendString(" blah");
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    // printf("%s\n\n", builder.returnWithString("5"));
+    // printf("%s\n\n", builder.returnWithCharPtr(cp, 7));
+    // printf("%s\n\n", builder.returnWithCharArray(ca, 6));
+    // printf("%s\n\n", builder.returnWithInt(5));
+    // printf("%s\n\n", builder.returnWithFloat(42.261, 6));
+    // printf("%s\n\n", builder.returnWithBool(true));
+    // printf("%s\n\n", builder.returnWithBool(false));
+    // printf("%s\n\n", builder.returnWithCopy(builder));
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+    builder.appendString("- fooooooooooooooooooooooooooo");
+    builder.printLengthAndAllocated();
+    printf("%s\n", builder.toString());
+    printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
+    printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+}
