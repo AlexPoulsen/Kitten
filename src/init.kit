@@ -1,0 +1,7 @@
+function populateJSONDir() {
+    system("git -C /usr/local/lib/kit/kitten/_kitten_json_dir clone https://github.com/AlexPoulsen/Kitten-packages.git");
+    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/* /usr/local/lib/kit/kitten/_kitten_json_dir");
+    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/.* /usr/local/lib/kit/kitten/_kitten_json_dir");
+    rmdir("/usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/");
+}
+
