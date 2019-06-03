@@ -1,3 +1,9 @@
+include "limits.h";
+include "unistd.h";
+include "sys/types.h";
+include "sys/stat.h";
+import stringbuilder;
+
 function populateJSONDir() {
     system("git -C /usr/local/lib/kit/kitten/_kitten_json_dir clone https://github.com/AlexPoulsen/Kitten-packages.git");
     system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/* /usr/local/lib/kit/kitten/_kitten_json_dir");
@@ -5,3 +11,30 @@ function populateJSONDir() {
     rmdir("/usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/");
 }
 
+
+function createDirs(root: StringBuilder) {
+    root.appendString("/kitten");
+    var errno;
+    var mkdirSuccess = mkdir(root.toString(), 0o777);
+    if mkdirSuccess != 0 {
+        perror(StringBuilder.newFromString("Creation of `").appendFromCopy(root).appendString("` failed").toString());
+    }
+    errno = 0;
+    mkdirSuccess = mkdir(root.returnWithString("/_kitten_json_dir"), 0o777);
+    if mkdirSuccess != 0 {
+        perror(StringBuilder.newFromString("Creation of `").appendString(root.returnWithString("/_kitten_json_dir")).appendString("` failed").toString());
+    }
+    errno = 0;
+    mkdirSuccess = mkdir(root.returnWithString("/_kitten_packages"), 0o777);
+    if mkdirSuccess != 0 {
+        perror(StringBuilder.newFromString("Creation of `").appendString(root.returnWithString("/_kitten_packages")).appendString("` failed").toString());
+    }
+    errno = 0;
+}
+
+
+function main() {
+    var root: StringBuilder = StringBuilder.newFromString("/Users/macbookpro/kitten/src");
+    createDirs(root.makeCopy());
+    patchPrelude(root.makeCopy());
+}
