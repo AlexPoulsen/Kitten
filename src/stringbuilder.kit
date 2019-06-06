@@ -13,14 +13,14 @@ var _minSizePreDoubling: Int = 10;
  * Not necessarily needed for the StringBuilder, but it's a useful function that works well for appending strings in a situation where a StringBuilder is not necessary
  */
 function strAdd(one: CString, two: CString): CString {
-    var out = malloc(one.length + two.length + 1);
+    var out = mallocator.calloc(one.length + two.length + 1);
     strcpy(out, one);
     strcat(out, two);
     return out;
 }
 
 function repeatChar(what: Char, times: Int) {
-    var out: Ptr[Char] = *(malloc(times)): Ptr[Char];
+    var out: Ptr[Char] = *(mallocator.calloc(times)): Ptr[Char];
     for n in 0 ... times {
         strncat(out, what, 1);
     }
@@ -57,14 +57,14 @@ struct StringBuilder {
     public static function new(size: Int = 0): StringBuilder {
         size = xs_MaxInt(size, _minSizePreDoubling * 2);
         return struct Self {
-            chars: *(malloc(20 * sizeof(Char))): Ptr[Char],
+            chars: *(mallocator.calloc(20 * sizeof(Char))): Ptr[Char],
             length: 0,
             allocated: size
         };
     }
 
     public static function newFromCopy(initialize: StringBuilder): StringBuilder {
-        var newChars: Ptr[Char] = *(malloc(initialize.allocated * sizeof(Char))): Ptr[Char];
+        var newChars: Ptr[Char] = *(mallocator.calloc(initialize.allocated * sizeof(Char))): Ptr[Char];
         strcpy(newChars, initialize.chars);
         return struct Self {
             chars: newChars,
@@ -77,7 +77,7 @@ struct StringBuilder {
         var initSize: Int = _minSizePreDoubling;
         initSize = xs_MaxInt(initialize.length, initSize) * 2;
         initSize = xs_MaxInt(size, initSize);
-        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        var initChars: Ptr[Char] = *(mallocator.calloc(initSize * sizeof(Char))): Ptr[Char];
         strcpy(initChars, initialize);
         return struct Self {
             chars: initChars,
@@ -89,7 +89,7 @@ struct StringBuilder {
     public static function newFromCharPtr(initialize: Ptr[Char], size: Int): StringBuilder {
         var initSize: Int = _minSizePreDoubling;
         initSize = xs_MaxInt(size, initSize) * 2;
-        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        var initChars: Ptr[Char] = *(mallocator.calloc(initSize * sizeof(Char))): Ptr[Char];
         strcpy(initChars, initialize);
         return struct Self {
             chars: initChars,
@@ -102,7 +102,7 @@ struct StringBuilder {
         var initSize: Int = _minSizePreDoubling;
         initSize = xs_MaxInt(initialize.length, initSize) * 2;
         initSize = xs_MaxInt(size, initSize);
-        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        var initChars: Ptr[Char] = *(mallocator.calloc(initSize * sizeof(Char))): Ptr[Char];
         strcpy(initChars, initialize);
         return struct Self {
             chars: initChars,
@@ -116,7 +116,7 @@ struct StringBuilder {
         var initSize: Int = _minSizePreDoubling;
         initSize = xs_MaxInt(numSize, initSize) * 2;
         initSize = xs_MaxInt(size, initSize);
-        var initChars: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        var initChars: Ptr[Char] = *(mallocator.calloc(initSize * sizeof(Char))): Ptr[Char];
         sprintf(initChars,"%d", initialize);
         return struct Self {
             chars: initChars,
@@ -136,7 +136,7 @@ struct StringBuilder {
         size = xs_MaxInt(aboveDecimalSize, size);
         initSize = (xs_MaxInt(size + 1, initSize) * 2) + 2;
         var initChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
-        var initCharsTemp: Ptr[Char] = *(malloc(initSize * sizeof(Char))): Ptr[Char];
+        var initCharsTemp: Ptr[Char] = *(mallocator.calloc(initSize * sizeof(Char))): Ptr[Char];
         sprintf(initCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), initialize);
         // strncpy(initChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
         // strncpy(initChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
@@ -204,7 +204,7 @@ struct StringBuilder {
 
     public function appendInt(append: Int): StringBuilder {
         var numSize: Int = xs_CeilToInt(log10(append: Float64)) + 1;  // for numbers like 1000000000, log10 will report the length as one less than it is.
-        var appendChars: Ptr[Char] = *(malloc(numSize * sizeof(Char))): Ptr[Char];
+        var appendChars: Ptr[Char] = *(mallocator.calloc(numSize * sizeof(Char))): Ptr[Char];
         sprintf(appendChars,"%d", append);
         this.ensureSpace(numSize);
         strcat(this.chars, appendChars);
@@ -225,7 +225,7 @@ struct StringBuilder {
         size = xs_MaxInt(aboveDecimalSize, size);
         appendSize = (xs_MaxInt(size + 1, appendSize) * 2) + 2;
         var appendChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
-        var appendCharsTemp: Ptr[Char] = *(malloc(appendSize * sizeof(Char))): Ptr[Char];
+        var appendCharsTemp: Ptr[Char] = *(mallocator.calloc(appendSize * sizeof(Char))): Ptr[Char];
         sprintf(appendCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), append);
         // strncpy(appendChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
         // strncpy(appendChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
@@ -264,7 +264,9 @@ struct StringBuilder {
     }
 
     public function appendFromCopy(initialize: StringBuilder): StringBuilder {
-        return this.appendCharPtr(initialize.chars, initialize.length);
+        var copyChars: Ptr[Char] = *(mallocator.calloc(this.allocated * sizeof(Char))): Ptr[Char];
+        strncpy(copyChars, initialize.chars, initialize.length);
+        return this.appendCharPtr(copyChars, initialize.length);
     }
 
 
@@ -279,13 +281,14 @@ struct StringBuilder {
     }
 
     public function toString(): CString {
-        var out: CString = malloc((this.length + 1) * sizeof(CString));
-        strcpy(out, this.chars);
+        var out: CString = mallocator.calloc((this.length + 1) * sizeof(CString));
+        strncpy(out, this.chars, this.length);
+        strncat(out, "\x00"[0], 1);
         return out;
     }
 
     public function makeCopy(): StringBuilder {
-        var copyChars: Ptr[Char] = *(malloc(this.allocated * sizeof(Char))): Ptr[Char];
+        var copyChars: Ptr[Char] = *(mallocator.calloc(this.allocated * sizeof(Char))): Ptr[Char];
         strcpy(copyChars, this.chars);
         return struct Self {
             chars: copyChars,
@@ -295,21 +298,21 @@ struct StringBuilder {
     }
 
     public function returnWithString(append: CString): CString {
-        var out: CString = malloc((this.length + append.length + 1) * sizeof(CString));
+        var out: CString = mallocator.calloc((this.length + append.length + 1) * sizeof(CString));
         strcpy(out, this.chars);
         strcat(out, append);
         return out;
     }
 
     public function returnWithCharPtr(append: Ptr[Char], size: Int): CString {
-        var out: CString = malloc((this.length + size + 1) * sizeof(CString));
+        var out: CString = mallocator.calloc((this.length + size + 1) * sizeof(CString));
         strcpy(out, this.chars);
         strncat(out, append, size);
         return out;
     }
 
     public function returnWithCharArray(append: CArray[Char], size: Int): CString {
-        var out: CString = malloc((this.length + size + 1) * sizeof(CString));
+        var out: CString = mallocator.calloc((this.length + size + 1) * sizeof(CString));
         strcpy(out, this.chars);
         strncat(out, append, size);
         return out;
@@ -317,7 +320,7 @@ struct StringBuilder {
 
     public function returnWithInt(append: Int): CString {
         var numSize: Int = xs_CeilToInt(log10(append: Float64)) + 1;  // for numbers like 1000000000, log10 will report the length as one less than it is.
-        var appendChars: Ptr[Char] = *(malloc(numSize * sizeof(Char))): Ptr[Char];
+        var appendChars: Ptr[Char] = *(mallocator.calloc(numSize * sizeof(Char))): Ptr[Char];
         sprintf(appendChars,"%d", append);
         return this.returnWithString(appendChars);
     }
@@ -335,7 +338,7 @@ struct StringBuilder {
         size = xs_MaxInt(aboveDecimalSize, size);
         appendSize = (xs_MaxInt(size + 1, appendSize) * 2) + 2;
         var appendChars: Ptr[Char] = *(mallocator.calloc((cacheSize * 2 + 1) * sizeof(Char))): Ptr[Char];
-        var appendCharsTemp: Ptr[Char] = *(malloc(appendSize * sizeof(Char))): Ptr[Char];
+        var appendCharsTemp: Ptr[Char] = *(mallocator.calloc(appendSize * sizeof(Char))): Ptr[Char];
         sprintf(appendCharsTemp, "%.*f", xs_MaxInt(size - aboveDecimalSize - 1, aboveDecimalSize), append);
         // strncpy(appendChars, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", (cacheSize * 2 + 1));
         // strncpy(appendChars, repeatChar("\x00"[0], 100), (cacheSize * 2 + 1));
@@ -371,7 +374,9 @@ struct StringBuilder {
     }
 
     public function returnWithCopy(initialize: StringBuilder): CString {
-        return this.returnWithCharPtr(initialize.chars, initialize.length);
+        var copyChars: Ptr[Char] = *(mallocator.calloc(this.allocated * sizeof(Char))): Ptr[Char];
+        strncpy(copyChars, initialize.chars, initialize.length);
+        return this.returnWithCharPtr(copyChars, initialize.length);
     }
 
 
@@ -495,4 +500,7 @@ function main(): Void {
     printf("%s\n", builder.toString());
     printf("%s\n", if builder.endsWith(c'o') then "true" else "false");
     printf("%s\n\n", if builder.endsWith(c'p') then "true" else "false");
+
+    var builder2 = StringBuilder.newFromString("hello world!");
+    printf("%s", StringBuilder.newFromString("foo ").appendFromCopy(builder2).appendString(" blah ").appendFromCopy(builder2).toString());
 }
