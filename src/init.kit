@@ -2,13 +2,31 @@ include "limits.h";
 include "unistd.h";
 include "sys/types.h";
 include "sys/stat.h";
+include "errno.h";
 import stringbuilder;
+import kit.sys.dir;
 
-function populateJSONDir() {
-    system("git -C /usr/local/lib/kit/kitten/_kitten_json_dir clone https://github.com/AlexPoulsen/Kitten-packages.git");
-    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/* /usr/local/lib/kit/kitten/_kitten_json_dir");
-    system("mv /usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/.* /usr/local/lib/kit/kitten/_kitten_json_dir");
-    rmdir("/usr/local/lib/kit/kitten/_kitten_json_dir/Kitten-packages/");
+function populateJSONDir(root: StringBuilder) {
+    root.appendString("/kitten/_kitten_json_dir");
+    chdir(root.toString());
+    system("rm -rf Kitten-packages");
+    system("git clone https://github.com/AlexPoulsen/Kitten-packages.git");
+    var errno: Int;
+    var rootCache: CString = root.toString();
+    printf("%s\n", root.returnWithString("/Kitten-packages"));
+    var dir: DirectoryReader = DirectoryReader.new(root.returnWithString("/Kitten-packages"));
+    if errno != 0{
+        perror("Directory read failed");
+    }
+    for d in dir {
+        if (strcmp(d.d_name, ".") != 0) && (strcmp(d.d_name, "..") != 0) {
+            var cmdSB1 = StringBuilder.newFromString("mv ").appendString(rootCache).appendString("/Kitten-packages/").appendString(d.d_name);
+            var cmdSB2 = StringBuilder.newFromString(cmdSB1.toString()).appendString(" ").appendString(rootCache);
+            // printf("%s  |  %s\n", d.d_name, cmdSB2.toString());
+            system(cmdSB2.toString());
+        }
+    }
+    rmdir(root.returnWithString("/Kitten-packages/"));
 }
 
 
@@ -34,7 +52,7 @@ function createDirs(root: StringBuilder) {
 
 
 function main() {
-    var root: StringBuilder = StringBuilder.newFromString("/Users/macbookpro/kitten/src");
+    var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
     createDirs(root.makeCopy());
-    patchPrelude(root.makeCopy());
+    populateJSONDir(root.makeCopy());
 }
