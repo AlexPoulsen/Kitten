@@ -11,6 +11,7 @@ import stringbuilder;
 function main() {
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
     updatePackages(root.makeCopy());
+    pullPackage("circular", root.makeCopy());
 }
 
 function updatePackages(root: StringBuilder) {
@@ -21,5 +22,49 @@ function updatePackages(root: StringBuilder) {
         chdir(cwd);
     } else {
         perror("getcwd() error");
+    }
+}
+
+function pullPackage(pkg: CString, root: StringBuilder) {
+    var packagedir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages");
+    var jsondir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_json_dir/packages");
+    var filename: StringBuilder = jsondir.makeCopy().appendString("/").appendString(pkg).appendString(".json");
+    printf("%s\n", filename.toString());
+    var pkgfile: Ptr[__sFILE] = fopen(filename.toString(), "w");
+    var fp: Ptr[FILE];
+    var lSize: Int64;
+    var buffer: Ptr[Char];
+    var jsonData: Ptr[json_t];
+    var jsonError: json_error_t;
+    if pkgfile == null {
+        perror("Error opening file");
+        printf("%s\n", filename.toString());
+    } else {
+        fp = fopen(filename.toString(), "rb");
+        fseek(fp, 0, SEEK_END);
+        lSize = ftell(fp);
+        rewind(fp);
+        if fread(buffer, lSize, 1 , fp) != 0 {
+            fclose(fp);
+            free(buffer);
+            fputs("entire read fails\n", stderr);
+        } else {
+            jsonData = json_loads(buffer, 0, &jsonError);
+            fclose(fp);
+            free(buffer);
+            if jsonData.type == JSON_OBJECT {
+                var link: Ptr[json_t] = json_object_get(jsonData, "github link");
+                if link.type == JSON_STRING {
+                    printf("%s", json_string_value(link));
+                    json_decref(jsonData);
+                } else {
+                    printf("Error: no GitHub link");
+                    json_decref(jsonData);
+                }
+            } else {
+                printf("Error: malformed kitten.json");
+                json_decref(jsonData);
+            }
+        }
     }
 }
