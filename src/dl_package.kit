@@ -2,17 +2,21 @@ include "limits.h";
 include "unistd.h";
 include "sys/types.h";
 include "sys/stat.h";
+include "jansson.h";
+include "errno.h";
 import init;
+import stringbuilder;
 
 
 function main() {
-    updatePackages();
+    var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
+    updatePackages(root.makeCopy());
 }
 
-function updatePackages() {
+function updatePackages(root: StringBuilder) {
     var cwd: Ptr[Char] = malloc(${PATH_MAX: Int} * sizeof(Char));
     if (getcwd(cwd, ${PATH_MAX: Int} * sizeof(Char)) != null) {
-        chdir("/usr/local/lib/kit/kitten/_kitten_json_dir/");
+        chdir(root.returnWithString("/_kitten_json_dir"));
         system("git pull");
         chdir(cwd);
     } else {
