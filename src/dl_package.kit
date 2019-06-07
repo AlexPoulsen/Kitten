@@ -30,35 +30,70 @@ function pullPackage(pkg: CString, root: StringBuilder) {
     var jsondir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_json_dir/packages");
     var filename: StringBuilder = jsondir.makeCopy().appendString("/").appendString(pkg).appendString(".json");
     printf("%s\n", filename.toString());
-    var pkgfile: Ptr[__sFILE] = fopen(filename.toString(), "w");
-    var fp: Ptr[FILE];
+    var fp: Ptr[FILE] = fopen(filename.toString(), "r");
     var lSize: Int64;
     var buffer: Ptr[Char];
     var jsonData: Ptr[json_t];
     var jsonError: json_error_t;
-    if pkgfile == null {
+    if fp == null {
         perror("Error opening file");
         printf("%s\n", filename.toString());
     } else {
-        fp = fopen(filename.toString(), "rb");
+        printf("opened %s\n", filename.toString());
         fseek(fp, 0, SEEK_END);
         lSize = ftell(fp);
         rewind(fp);
-        if fread(buffer, lSize, 1 , fp) != 0 {
+        buffer = calloc(1, lSize+1);
+        if 1 != fread(buffer, lSize, 1 , fp) {
             fclose(fp);
             free(buffer);
             fputs("entire read fails\n", stderr);
         } else {
+            printf("reading succeeded\n%s\n", buffer);
             jsonData = json_loads(buffer, 0, &jsonError);
             fclose(fp);
             free(buffer);
             if jsonData.type == JSON_OBJECT {
+                printf("JSON is object\n");
                 var link: Ptr[json_t] = json_object_get(jsonData, "github link");
+                var id: Ptr[json_t] = json_object_get(jsonData, "id");
+                var linkIsString: Bool = false;
+                var idIsString: Bool = false;
                 if link.type == JSON_STRING {
-                    printf("%s", json_string_value(link));
-                    json_decref(jsonData);
+                    linkIsString = true;
                 } else {
                     printf("Error: no GitHub link");
+                    json_decref(jsonData);
+                }
+                if id.type == JSON_STRING {
+                    idIsString = true;
+                } else {
+                    printf("Error: no `id` string");
+                    json_decref(jsonData);
+                }
+                if idIsString && linkIsString {
+                    const linkString: CString = json_string_value(link);
+                    const idString: CString = json_string_value(id);
+                    printf("%s\n", json_string_value(link));
+                    chdir(packagedir.toString());
+                    var dirCmd: StringBuilder = StringBuilder.newFromString("rm -rf ");
+                    dirCmd.appendString(packagedir.toString());
+                    dirCmd.appendString("/");
+                    dirCmd.appendString(idString);
+                    const mkdirSuccess = mkdir(dirCmd.toString(), 0o777);
+                    var gitCmd: StringBuilder = StringBuilder.newFromString("git clone ");
+                    // gitCmd.appendString(packagedir.toString());
+                    // gitCmd.appendString("/");
+                    gitCmd.appendString(linkString);
+                    if mkdirSuccess != 0 {  // prevents a package that adds a second command or deletes a different directory from being easily entered
+                        printf("%s\n", dirCmd.toString());
+                        system(dirCmd.toString());
+                    } else {
+                        printf("%s\n", dirCmd.toString());
+                        system(dirCmd.toString());
+                    }
+                    // printf("%s\n", gitCmd.toString());
+                    system(gitCmd.toString());
                     json_decref(jsonData);
                 }
             } else {
