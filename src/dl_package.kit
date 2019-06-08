@@ -106,12 +106,15 @@ function pullPackage(pkg: CString, root: StringBuilder) {
                     // gitCmd.appendString(packagedir.toString());
                     // gitCmd.appendString("/");
                     gitCmd.appendString(linkString);
-                    if mkdirSuccess != 0 {  // prevents a package that adds a second command or deletes a different directory from being easily entered
-                        // printf("%s\n", dirCmd.toString());
-                        system(dirCmd.toString());
-                    } else {
-                        // printf("%s\n", dirCmd.toString());
-                        system(dirCmd.toString());
+                    if (strstr(dirCmd.toString(), "&") != null) && (strstr(dirCmd.toString(), ";") != null) {
+                        // prevents a package that adds a second command or deletes a different directory from being easily entered
+                        if mkdirSuccess != 0 {
+                            // printf("%s\n", dirCmd.toString());
+                            system(dirCmd.toString());
+                        } else {
+                            // printf("%s\n", dirCmd.toString());
+                            system(dirCmd.toString());
+                        }
                     }
                     // printf("%s\n", gitCmd.toString());
                     system(gitCmd.toString());
