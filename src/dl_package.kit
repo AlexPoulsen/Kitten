@@ -10,11 +10,12 @@ import stringbuilder;
 
 function main() {
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
-    updatePackages(root.makeCopy());
-    pullPackage("circular", root.makeCopy());
+    updatePackageJSONs(root.makeCopy());
+    pullPackage("xs_rounding", root.makeCopy());
 }
 
-function updatePackages(root: StringBuilder) {
+
+function updatePackageJSONs(root: StringBuilder) {
     var cwd: Ptr[Char] = malloc(${PATH_MAX: Int} * sizeof(Char));
     if (getcwd(cwd, ${PATH_MAX: Int} * sizeof(Char)) != null) {
         chdir(root.returnWithString("/_kitten_json_dir"));
@@ -24,6 +25,28 @@ function updatePackages(root: StringBuilder) {
         perror("getcwd() error");
     }
 }
+
+
+function copyFile(from: CString, to: CString) {
+    printf("%s -> %s\n", from, to);
+    var fromFile: Ptr[__sFILE] = fopen(from, "r");
+    var toFile: Ptr[__sFILE] = fopen(to, "w");
+    if fromFile == null {
+        perror("Error opening file");
+        printf("%s\n", fromFile);
+    } else if toFile == null {
+        perror("Error opening file");
+        printf("%s\n", toFile);
+    } else {
+        var line: CArray[Char, 2048];
+        while fgets(line, sizeof(CArray[Char, 2048]), fromFile) != null {
+            fprintf(toFile, "%s", line);
+        }
+        fclose(fromFile);
+        fclose(toFile);
+    }
+}
+
 
 function pullPackage(pkg: CString, root: StringBuilder) {
     var packagedir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages");
@@ -63,13 +86,11 @@ function pullPackage(pkg: CString, root: StringBuilder) {
                     linkIsString = true;
                 } else {
                     printf("Error: no GitHub link");
-                    json_decref(jsonData);
                 }
                 if id.type == JSON_STRING {
                     idIsString = true;
                 } else {
                     printf("Error: no `id` string");
-                    json_decref(jsonData);
                 }
                 if idIsString && linkIsString {
                     const linkString: CString = json_string_value(link);
@@ -86,20 +107,26 @@ function pullPackage(pkg: CString, root: StringBuilder) {
                     // gitCmd.appendString("/");
                     gitCmd.appendString(linkString);
                     if mkdirSuccess != 0 {  // prevents a package that adds a second command or deletes a different directory from being easily entered
-                        printf("%s\n", dirCmd.toString());
+                        // printf("%s\n", dirCmd.toString());
                         system(dirCmd.toString());
                     } else {
-                        printf("%s\n", dirCmd.toString());
+                        // printf("%s\n", dirCmd.toString());
                         system(dirCmd.toString());
                     }
                     // printf("%s\n", gitCmd.toString());
                     system(gitCmd.toString());
-                    json_decref(jsonData);
+                    var gitRepoName: Ptr[Char] = strrchr(linkString, c'/');
+                    if gitRepoName != null {
+                        printf("%s\n", gitRepoName);
+                        rename(packagedir.makeCopy().appendString("/").appendString(gitRepoName).returnWithString("/"), packagedir.makeCopy().appendString("/").appendString(pkg).returnWithString("/"));
+                    }
+                    copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"));
+                    rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").returnWithString("kitten.json"));
                 }
             } else {
                 printf("Error: malformed kitten.json");
-                json_decref(jsonData);
             }
+            json_decref(jsonData);
         }
     }
 }
