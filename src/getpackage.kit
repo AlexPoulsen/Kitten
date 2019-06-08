@@ -12,7 +12,7 @@ import processpackage;
 function main() {
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
     updatePackageJSONs(root.makeCopy());
-    // pullPackage("xs_rounding", root.makeCopy());
+    installPackage("xs_rounding", root.makeCopy());
     updatePackage("xs_rounding", root.makeCopy());
 }
 
@@ -35,10 +35,10 @@ function copyFile(from: CString, to: CString) {
     var toFile: Ptr[__sFILE] = fopen(to, "w");
     if fromFile == null {
         perror("Error opening file");
-        printf("%s\n", fromFile);
+        printf("%s\n", from);
     } else if toFile == null {
         perror("Error opening file");
-        printf("%s\n", toFile);
+        printf("%s\n", to);
     } else {
         var line: CArray[Char, 2048];
         while fgets(line, sizeof(CArray[Char, 2048]), fromFile) != null {
@@ -74,7 +74,7 @@ function installPackage(pkg: CString, root: StringBuilder) {
             free(buffer);
             fputs("entire read fails\n", stderr);
         } else {
-            printf("reading succeeded\n%s\n", buffer);
+            printf("reading succeeded\n");  // \n%s, buffer
             jsonData = json_loads(buffer, 0, &jsonError);
             fclose(fp);
             free(buffer);
@@ -108,7 +108,7 @@ function installPackage(pkg: CString, root: StringBuilder) {
                     // gitCmd.appendString(packagedir.toString());
                     // gitCmd.appendString("/");
                     gitCmd.appendString(linkString);
-                    if (strstr(dirCmd.toString(), "&") != null) && (strstr(dirCmd.toString(), ";") != null) {
+                    if (strstr(dirCmd.toString(), "&") == null) && (strstr(dirCmd.toString(), ";") == null) {
                         // prevents a package that adds a second command or deletes a different directory from being easily entered
                         if mkdirSuccess != 0 {
                             // printf("%s\n", dirCmd.toString());
@@ -123,10 +123,10 @@ function installPackage(pkg: CString, root: StringBuilder) {
                     var gitRepoName: Ptr[Char] = strrchr(linkString, c'/');
                     if gitRepoName != null {
                         printf("%s\n", gitRepoName);
-                        rename(packagedir.makeCopy().appendString("/").appendString(gitRepoName).returnWithString("/"), packagedir.makeCopy().appendString("/").appendString(pkg).returnWithString("/"));
+                        rename(packagedir.makeCopy().appendString("/").appendString(gitRepoName).returnWithString("/"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/"));
                     }
-                    copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"));
-                    rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").returnWithString("kitten.json"));
+                    copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(idString).appendString("/").appendString(pkg).returnWithString(".json"));
+                    rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
                 }
             } else {
                 printf("Error: malformed kitten.json");
@@ -138,7 +138,60 @@ function installPackage(pkg: CString, root: StringBuilder) {
 
 
 function updatePackage(pkg: CString, root: StringBuilder) {
-    chdir(root.makeCopy().appendString("/kitten/_kitten_packages").appendString("/").returnWithString(pkg));
-    system("git pull");
-    processpackage.process(pkg, root);
+    var packagedir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages");
+    var jsondir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_json_dir/packages");
+    var filename: StringBuilder = jsondir.makeCopy().appendString("/").appendString(pkg).appendString(".json");
+    printf("%s\n", filename.toString());
+    var fp: Ptr[FILE] = fopen(filename.toString(), "r");
+    var lSize: Int64;
+    var buffer: Ptr[Char];
+    var jsonData: Ptr[json_t];
+    var jsonError: json_error_t;
+    if fp == null {
+        perror("Error opening file");
+        printf("%s\n", filename.toString());
+    } else {
+        printf("opened %s\n", filename.toString());
+        fseek(fp, 0, SEEK_END);
+        lSize = ftell(fp);
+        rewind(fp);
+        buffer = calloc(1, lSize+1);
+        if 1 != fread(buffer, lSize, 1 , fp) {
+            fclose(fp);
+            free(buffer);
+            fputs("entire read fails\n", stderr);
+        } else {
+            printf("reading succeeded\n");  // \n%s, buffer
+            jsonData = json_loads(buffer, 0, &jsonError);
+            fclose(fp);
+            free(buffer);
+            if jsonData.type == JSON_OBJECT {
+                printf("JSON is object\n");
+                var link: Ptr[json_t] = json_object_get(jsonData, "github link");
+                var id: Ptr[json_t] = json_object_get(jsonData, "id");
+                var linkIsString: Bool = false;
+                var idIsString: Bool = false;
+                if link.type == JSON_STRING {
+                    linkIsString = true;
+                } else {
+                    printf("Error: no GitHub link");
+                }
+                if id.type == JSON_STRING {
+                    idIsString = true;
+                } else {
+                    printf("Error: no `id` string");
+                }
+                if idIsString && linkIsString {
+                    const linkString: CString = json_string_value(link);
+                    const idString: CString = json_string_value(id);
+                    chdir(root.makeCopy().appendString("/kitten/_kitten_packages").appendString("/").returnWithString(idString));
+                    system("git pull");
+                    processpackage.process(pkg, root, idString);
+                }
+            } else {
+                printf("Error: malformed kitten.json");
+            }
+            json_decref(jsonData);
+        }
+    }
 }

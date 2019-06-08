@@ -10,12 +10,12 @@ include "sys/stat.h";
 
 function main() {
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
-    process("xs_rounding", root.makeCopy());
+    process("xs_rounding", root.makeCopy(), "sree_kotay.xs_rounding");
 }
 
 
-function process(package: CString, root: StringBuilder) {
-    var sb: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages/").appendString(package);
+function process(package: CString, root: StringBuilder, idString: CString) {
+    var sb: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages/").appendString(idString);
     var errno;
     var dirCheck: Ptr[DIR] = opendir(sb.toString());
     if dirCheck == null {
