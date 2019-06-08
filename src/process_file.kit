@@ -9,14 +9,13 @@ include "sys/stat.h";
 
 
 function main() {
-    process("xs_rounding");
+    var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
+    process("xs_rounding", root.makeCopy());
 }
 
 
-function process(package: CString) {
-    var base: CString = "/usr/local/lib/kit/kitten/_kitten_packages/";
-    var sb: StringBuilder = StringBuilder.newFromString(base);
-    sb.appendString(package);
+function process(package: CString, root: StringBuilder) {
+    var sb: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages/").appendString(package);
     var errno;
     var dirCheck: Ptr[DIR] = opendir(sb.toString());
     if dirCheck == null {
@@ -126,18 +125,17 @@ function process(package: CString) {
             errno = 0;
             printf("-- Error: directory does not exist.\n");
         } else {
-            findFiles(dir, verPath, package, "");
+            findFiles(dir, verPath, package, "", root.makeCopy());
         }
     }
     return 0;
 }
 
 
-function findFiles(dir: DirectoryReader, path: CString, package: CString, subfolder: CString): Void {
+function findFiles(dir: DirectoryReader, path: CString, package: CString, subfolder: CString, root: StringBuilder): Void {
     // printf("%s\n", path);
-    var packageDir: CString = "/usr/local/lib/kit/kitten/";
-    var sbPackageDir: StringBuilder = StringBuilder.newFromString(packageDir);
-    var sbPackageDirNoFolder: StringBuilder = StringBuilder.newFromString(packageDir);
+    var sbPackageDir: StringBuilder = root.makeCopy().appendString("/kitten/");
+    var sbPackageDirNoFolder: StringBuilder = root.makeCopy().appendString("/kitten/");
     sbPackageDir.appendString(package);
     sbPackageDir.appendString("/");
     if strcmp(subfolder, "") != 0 {
@@ -212,7 +210,7 @@ function findFiles(dir: DirectoryReader, path: CString, package: CString, subfol
             var sbSubfolder: StringBuilder = StringBuilder.newFromString(subfolder);
             sbSubfolder.appendString("/");
             sbSubfolder.appendString(d.d_name);
-            findFiles(DirectoryReader.new(sbNew.toString()), sbNew.toString(), package, sbSubfolder.toString());
+            findFiles(DirectoryReader.new(sbNew.toString()), sbNew.toString(), package, sbSubfolder.toString(), root.makeCopy());
         }
     }
 }
