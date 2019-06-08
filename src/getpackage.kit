@@ -50,7 +50,7 @@ function copyFile(from: CString, to: CString) {
 }
 
 
-function pullPackage(pkg: CString, root: StringBuilder) {
+function installPackage(pkg: CString, root: StringBuilder) {
     var packagedir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages");
     var jsondir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_json_dir/packages");
     var filename: StringBuilder = jsondir.makeCopy().appendString("/").appendString(pkg).appendString(".json");
