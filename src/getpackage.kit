@@ -6,7 +6,7 @@ include "jansson.h";
 include "errno.h";
 import init;
 import stringbuilder;
-import process_file;
+import processpackage;
 
 
 function main() {
@@ -140,5 +140,5 @@ function pullPackage(pkg: CString, root: StringBuilder) {
 function updatePackage(pkg: CString, root: StringBuilder) {
     chdir(root.makeCopy().appendString("/kitten/_kitten_packages").appendString("/").returnWithString(pkg));
     system("git pull");
-    process_file.process(pkg, root);
+    processpackage.process(pkg, root);
 }
