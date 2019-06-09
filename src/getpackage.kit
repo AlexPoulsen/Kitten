@@ -12,8 +12,9 @@ import processpackage;
 function main() {
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
     updatePackageJSONs(root.makeCopy());
-    installPackage("xs_rounding", root.makeCopy());
-    updatePackage("xs_rounding", root.makeCopy());
+    installPackage("Arguments", root.makeCopy());
+    updatePackage("Arguments", root.makeCopy());
+    // uninstallPackage("Arguments", root.makeCopy());
 }
 
 
@@ -125,8 +126,8 @@ function installPackage(pkg: CString, root: StringBuilder) {
                         printf("%s\n", gitRepoName);
                         rename(packagedir.makeCopy().appendString("/").appendString(gitRepoName).returnWithString("/"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/"));
                     }
-                    copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(idString).appendString("/").appendString(pkg).returnWithString(".json"));
-                    rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
+                    copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
+                    // rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
                 }
             } else {
                 printf("Error: malformed kitten.json");
@@ -187,6 +188,90 @@ function updatePackage(pkg: CString, root: StringBuilder) {
                     chdir(root.makeCopy().appendString("/kitten/_kitten_packages").appendString("/").returnWithString(idString));
                     system("git pull");
                     processpackage.process(pkg, root, idString);
+                }
+            } else {
+                printf("Error: malformed kitten.json");
+            }
+            json_decref(jsonData);
+        }
+    }
+}
+
+
+function uninstallPackage(pkg: CString, root: StringBuilder) {
+    var packagedir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages");
+    var jsondir: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_json_dir/packages");
+    var filename: StringBuilder = jsondir.makeCopy().appendString("/").appendString(pkg).appendString(".json");
+    printf("%s\n", filename.toString());
+    var fp: Ptr[FILE] = fopen(filename.toString(), "r");
+    var lSize: Int64;
+    var buffer: Ptr[Char];
+    var jsonData: Ptr[json_t];
+    var jsonError: json_error_t;
+    if fp == null {
+        perror("Error opening file");
+        printf("%s\n", filename.toString());
+    } else {
+        printf("opened %s\n", filename.toString());
+        fseek(fp, 0, SEEK_END);
+        lSize = ftell(fp);
+        rewind(fp);
+        buffer = calloc(1, lSize+1);
+        if 1 != fread(buffer, lSize, 1 , fp) {
+            fclose(fp);
+            free(buffer);
+            fputs("entire read fails\n", stderr);
+        } else {
+            printf("reading succeeded\n");  // \n%s, buffer
+            jsonData = json_loads(buffer, 0, &jsonError);
+            fclose(fp);
+            free(buffer);
+            if jsonData.type == JSON_OBJECT {
+                printf("JSON is object\n");
+                var id: Ptr[json_t] = json_object_get(jsonData, "id");
+                var name: Ptr[json_t] = json_object_get(jsonData, "name");
+                var idIsString: Bool = false;
+                var nameIsString: Bool = false;
+                if id.type == JSON_STRING {
+                    idIsString = true;
+                } else {
+                    printf("Error: no `id` string");
+                }
+                if name.type == JSON_STRING {
+                    nameIsString = true;
+                } else {
+                    printf("Error: no `name` string");
+                }
+                if idIsString && nameIsString {
+                    chdir(packagedir.toString());
+                    const idStr: CString = json_string_value(id);
+                    const idStrCopy1: CString = mallocator.calloc(200);
+                    const idStrCopy2: CString = mallocator.calloc(200);
+                    strncpy(idStrCopy1, idStr, 200);
+                    strncpy(idStrCopy2, idStrCopy1, 200);
+                    const nameStr: CString = json_string_value(name);
+                    var dirCmd1: StringBuilder = StringBuilder.newFromString("rm -rf ");
+                    dirCmd1.appendString(packagedir.toString());
+                    dirCmd1.appendString("/");
+                    dirCmd1.appendString(idStrCopy1);
+                    dirCmd1.appendString("/");
+                    var dirCmd2: StringBuilder = StringBuilder.newFromString("rm -rf ");
+                    dirCmd2 = StringBuilder.newFromString(dirCmd2.appendString(root.toString()).returnWithString("/kitten/")).appendString(nameStr);  // yes this is hacky, yes this is not how it should be done, but it makes the program work, and stops it from doing weird things that don't happen in other files.
+                    // printf("%s (%d)\n", nameStr, nameStr.length);
+                    // printf("%s\n", dirCmd2.toString());
+                    // printf("%s\n", dirCmd1.toString());
+                    var dirCmd1Str: CString = dirCmd1.toString();
+                    var dirCmd2Str: CString = dirCmd2.toString();
+                    if (strstr(dirCmd1Str, "&") == null) &&
+                       (strstr(dirCmd1Str, ";") == null) &&
+                       (strstr(dirCmd2Str, "&") == null) &&
+                       (strstr(dirCmd2Str, ";") == null) {
+                        // prevents a package that adds a second command or deletes a different directory from being easily entered
+                        system(dirCmd1Str);
+                        // printf("%s\n", dirCmd2Str);
+                        system(dirCmd2Str);
+                        system(dirCmd2.returnWithString(".kit"));
+                    }
                 }
             } else {
                 printf("Error: malformed kitten.json");

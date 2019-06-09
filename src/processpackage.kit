@@ -15,6 +15,7 @@ function main() {
 
 
 function process(package: CString, root: StringBuilder, idString: CString) {
+    // printf("in process\n");
     var sb: StringBuilder = root.makeCopy().appendString("/kitten/_kitten_packages/").appendString(idString);
     var errno;
     var dirCheck: Ptr[DIR] = opendir(sb.toString());
@@ -134,6 +135,7 @@ function process(package: CString, root: StringBuilder, idString: CString) {
 
 function findFiles(dir: DirectoryReader, path: CString, package: CString, subfolder: CString, root: StringBuilder): Void {
     // printf("%s\n", path);
+    // printf("in findFiles\n");
     var sbPackageDir: StringBuilder = root.makeCopy().appendString("/kitten/");
     var sbPackageDirNoFolder: StringBuilder = root.makeCopy().appendString("/kitten/");
     sbPackageDir.appendString(package);
@@ -225,6 +227,7 @@ function strAdd(one: CString, two: CString): CString {
 
 
 function replaceLocalImports(filename: CString, package: CString): Void {
+    // printf("in replaceLocalImports\n");
     rename(filename, strAdd(filename, "_old"));
     var file: Ptr[__sFILE] = fopen(strAdd(filename, "_old"), "r");
     // printf("oldfile: %s\n", strAdd(filename, "_old"));
