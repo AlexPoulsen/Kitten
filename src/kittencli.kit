@@ -1,0 +1,338 @@
+import arguments.*;
+
+
+struct InstallHandler {
+    var packages: Vector[CString];
+    var verbose: Bool = false;
+    var silent: Bool = false;
+
+    static function new(): InstallHandler {
+        return struct Self {
+            packages: Vector.new(10)
+        };
+    }
+}
+
+
+implement Handler for InstallHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        var capacity: Int = 256;
+        var str: Ptr[Char] = *(mallocator.calloc(capacity)): Ptr[Char];
+        snprintf(str, capacity, "%s", choice.strVal);
+        this.packages.push(str);
+    }
+
+    function end(cmd: Command): Void {
+        printf("Installing packages: ");
+        for n in 0 ... this.packages.length - 1 {
+            printf("%s, ", this.packages[n]);
+        }
+        printf("%s\n", this.packages[this.packages.length - 1]);
+        // for n in 0 ... this.packages.length {
+        //     installPackage(this.packages[n]);
+        // }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+        match arg.shortName {
+            c'v' => {
+                this.verbose = true;
+            }
+            c's' => {
+                this.verbose = false;
+                this.silent = true;
+            }
+            default => {
+                printf("%s: ", arg.longName);
+                choice.printLn();
+            }
+        }
+    }
+}
+
+
+struct UninstallHandler {
+    var packages: Vector[CString];
+    var verbose: Bool = false;
+    var silent: Bool = false;
+
+    static function new(): UninstallHandler {
+        return struct Self {
+            packages: Vector.new(10)
+        };
+    }
+}
+
+
+implement Handler for UninstallHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        var capacity: Int = 256;
+        var str: Ptr[Char] = *(mallocator.calloc(capacity)): Ptr[Char];
+        snprintf(str, capacity, "%s", choice.strVal);
+        this.packages.push(str);
+    }
+
+    function end(cmd: Command): Void {
+        printf("Uninstalling packages: ");
+        for n in 0 ... this.packages.length - 1 {
+            printf("%s, ", this.packages[n]);
+        }
+        printf("%s\n", this.packages[this.packages.length - 1]);
+        // for n in 0 ... this.packages.length {
+        //     installPackage(this.packages[n]);
+        // }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+        match arg.shortName {
+            c'v' => {
+                this.verbose = true;
+            }
+            c's' => {
+                this.verbose = false;
+                this.silent = true;
+            }
+            default => {
+                printf("%s: ", arg.longName);
+                choice.printLn();
+            }
+        }
+    }
+}
+
+
+struct UpdateHandler {
+    var packages: Vector[CString];
+    var verbose: Bool = false;
+    var silent: Bool = false;
+
+    static function new(): UpdateHandler {
+        return struct Self {
+            packages: Vector.new(10)
+        };
+    }
+}
+
+
+implement Handler for UpdateHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        var capacity: Int = 256;
+        var str: Ptr[Char] = *(mallocator.calloc(capacity)): Ptr[Char];
+        snprintf(str, capacity, "%s", choice.strVal);
+        this.packages.push(str);
+    }
+
+    function end(cmd: Command): Void {
+        if this.packages.length > 0 {
+            printf("Updating packages: ");
+            for n in 0 ... this.packages.length - 1 {
+                printf("%s, ", this.packages[n]);
+            }
+            printf("%s\n", this.packages[this.packages.length - 1]);
+        } else {
+            printf("`kitten update package` is used for updating packages. Use `kitten upgrade` to update Kitten.");
+        }
+        // for n in 0 ... this.packages.length {
+        //     installPackage(this.packages[n]);
+        // }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+        match arg.shortName {
+            c'v' => {
+                this.verbose = true;
+            }
+            c's' => {
+                this.verbose = false;
+                this.silent = true;
+            }
+            default => {
+                printf("%s: ", arg.longName);
+                choice.printLn();
+            }
+        }
+    }
+}
+
+
+struct UpgradeHandler {
+    var hasBeenCalled: Bool = false;
+    var verbose: Bool = false;
+    var silent: Bool = false;
+
+    static function new(): UpgradeHandler {
+        return struct Self {
+            hasBeenCalled: false
+        };
+    }
+}
+
+
+implement Handler for UpgradeHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        this.hasBeenCalled = true;
+    }
+
+    function end(cmd: Command): Void {
+        if this.hasBeenCalled {
+            printf("`kitten upgrade` is used to update Kitten. Use `kitten update package` to update a package.\n");
+        } else {
+            printf("Upgrading Kitten\n");
+        }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+        match arg.shortName {
+            c'v' => {
+                this.verbose = true;
+            }
+            c's' => {
+                this.verbose = false;
+                this.silent = true;
+            }
+            default => {
+                printf("%s: ", arg.longName);
+                choice.printLn();
+            }
+        }
+    }
+}
+
+
+struct HelpHandler {
+    var commands: Vector[CString];
+
+    static function new(): HelpHandler {
+        return struct Self {
+            commands: Vector.new(10)
+        };
+    }
+}
+
+
+implement Handler for HelpHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        var capacity: Int = 256;
+        var str: Ptr[Char] = *(mallocator.calloc(capacity)): Ptr[Char];
+        snprintf(str, capacity, "%s", choice.strVal);
+        this.commands.push(str);
+    }
+
+    function end(cmd: Command): Void {
+        for n in 0 ... this.commands.length {
+            match lowercase(this.commands[n]) {
+                "install" => {
+                    printf("`kitten install mypackage package2` installs one or more packages.\n");
+                }
+                "uninstall" => {
+                    printf("`kitten uninstall mypackage package2` uninstalls one or more packages.\n");
+                }
+                "update" => {
+                    printf("`kitten update mypackage package2` updates one or more packages.\n");
+                }
+                "upgrade" => {
+                    printf("`kitten upgrade` updates Kitten.\n");
+                }
+                "help" => {
+                    printf("`kitten help command` gets help with a command.\n");
+                }
+                default => {
+                    printf("`%s` is not a valid Kitten command.\n", this.commands[n]);
+                }
+            }
+        }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+    }
+}
+
+
+struct PlainHandler {
+    var hasBeenCalled: Bool = false;
+
+    static function new(): PlainHandler {
+        return struct Self {
+            hasBeenCalled: false
+        };
+    }
+}
+
+
+implement Handler for PlainHandler {
+    function nothing(cmd: Command): Void {
+        printf("empty input\n");
+    }
+
+    function extra(choice: Choice, args: Arguments): Void {
+        this.hasBeenCalled = true;
+    }
+
+    function end(cmd: Command): Void {
+        if this.hasBeenCalled {
+            printf("`kitten install mypackage` to install a package\n`kitten uninstall mypackage` to uninstall a package\n`kitten update mypackage` to update a package\n`kitten upgrade` to update Kitten\n`kitten help command` to get help for a command\n");
+        }
+    }
+
+    function arg(choice: Choice, arg: Argument, args: Arguments): Void {
+        this.hasBeenCalled = true;
+    }
+}
+
+
+function main(argc: Int, argv: Ptr[Ptr[Char]]) {
+    var installH:   InstallHandler   = InstallHandler.new();
+    var uninstallH: UninstallHandler = UninstallHandler.new();
+    var updateH:    UpdateHandler    = UpdateHandler.new();
+    var upgradeH:   UpgradeHandler   = UpgradeHandler.new();
+    var helpH:      HelpHandler      = HelpHandler.new();
+    var plainH:     PlainHandler     = PlainHandler.new();
+
+    var installA:   Arguments        = Arguments.new(installH);
+    installA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+    installA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+
+    var uninstallA: Arguments        = Arguments.new(uninstallH);
+    uninstallA.add( c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+    uninstallA.add( c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+
+    var updateA:    Arguments        = Arguments.new(updateH);
+    updateA.add(    c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+    updateA.add(    c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+
+    var upgradeA:   Arguments        = Arguments.new(upgradeH);
+    upgradeA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+    upgradeA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+
+    var helpA:      Arguments        = Arguments.new(helpH);
+    var plainA:     Arguments        = Arguments.new(plainH);
+
+    var command:    Command          = Command.new(plainA);
+    command.addSubcommand("install",   installA);
+    command.addSubcommand("uninstall", uninstallA);
+    command.addSubcommand("update",    updateA);
+    command.addSubcommand("upgrade",   upgradeA);
+    command.addSubcommand("help",      helpA);
+
+    command.process(argc, argv);
+}
