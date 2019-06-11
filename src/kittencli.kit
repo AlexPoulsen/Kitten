@@ -36,6 +36,7 @@ implement Handler for InstallHandler {
         for n in 0 ... this.packages.length - 1 {
             printf("%s, ", this.packages[n]);
         }
+        updatePackageJSONs(root.makeCopy());
         printf("%s\n", this.packages[this.packages.length - 1]);
         // for n in 0 ... this.packages.length {
         //     installPackage(this.packages[n]);
@@ -154,12 +155,13 @@ implement Handler for UpdateHandler {
                 printf("%s, ", this.packages[n]);
             }
             printf("%s\n", this.packages[this.packages.length - 1]);
+            updatePackageJSONs(root.makeCopy());
+            // for n in 0 ... this.packages.length {
+            //     updatePackage(this.packages[n]);
+            // }
         } else {
             printf("`kitten update package` is used for updating packages. Use `kitten upgrade` to update Kitten.");
         }
-        // for n in 0 ... this.packages.length {
-        //     installPackage(this.packages[n]);
-        // }
     }
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
