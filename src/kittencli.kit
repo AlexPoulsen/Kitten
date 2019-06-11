@@ -1,14 +1,19 @@
 import arguments.*;
+import stringbuilder;
 
 
 struct InstallHandler {
     var packages: Vector[CString];
     var verbose: Bool = false;
     var silent: Bool = false;
+    var root: StringBuilder;
 
-    static function new(): InstallHandler {
+    static function new(root: StringBuilder): InstallHandler {
         return struct Self {
-            packages: Vector.new(10)
+            packages: Vector.new(10),
+            verbose: false,
+            silent: false,
+            root
         };
     }
 }
@@ -59,10 +64,14 @@ struct UninstallHandler {
     var packages: Vector[CString];
     var verbose: Bool = false;
     var silent: Bool = false;
+    var root: StringBuilder;
 
-    static function new(): UninstallHandler {
+    static function new(root: StringBuilder): UninstallHandler {
         return struct Self {
-            packages: Vector.new(10)
+            packages: Vector.new(10),
+            verbose: false,
+            silent: false,
+            root
         };
     }
 }
@@ -113,10 +122,14 @@ struct UpdateHandler {
     var packages: Vector[CString];
     var verbose: Bool = false;
     var silent: Bool = false;
+    var root: StringBuilder;
 
-    static function new(): UpdateHandler {
+    static function new(root: StringBuilder): UpdateHandler {
         return struct Self {
-            packages: Vector.new(10)
+            packages: Vector.new(10),
+            verbose: false,
+            silent: false,
+            root
         };
     }
 }
@@ -171,10 +184,14 @@ struct UpgradeHandler {
     var hasBeenCalled: Bool = false;
     var verbose: Bool = false;
     var silent: Bool = false;
+    var root: StringBuilder;
 
-    static function new(): UpgradeHandler {
+    static function new(root: StringBuilder): UpgradeHandler {
         return struct Self {
-            hasBeenCalled: false
+            hasBeenCalled: false,
+            verbose: false,
+            silent: false,
+            root
         };
     }
 }
@@ -305,10 +322,11 @@ implement Handler for PlainHandler {
 
 
 function main(argc: Int, argv: Ptr[Ptr[Char]]) {
-    var installH:   InstallHandler   = InstallHandler.new();
-    var uninstallH: UninstallHandler = UninstallHandler.new();
-    var updateH:    UpdateHandler    = UpdateHandler.new();
-    var upgradeH:   UpgradeHandler   = UpgradeHandler.new();
+    var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
+    var installH:   InstallHandler   = InstallHandler.new(   root.makeCopy());
+    var uninstallH: UninstallHandler = UninstallHandler.new( root.makeCopy());
+    var updateH:    UpdateHandler    = UpdateHandler.new(    root.makeCopy());
+    var upgradeH:   UpgradeHandler   = UpgradeHandler.new(   root.makeCopy());
     var helpH:      HelpHandler      = HelpHandler.new();
     var plainH:     PlainHandler     = PlainHandler.new();
 
