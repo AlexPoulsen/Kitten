@@ -128,6 +128,7 @@ function installPackage(pkg: CString, root: StringBuilder) {
                     }
                     copyFile(filename.toString(), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
                     // rename(packagedir.makeCopy().appendString("/").appendString(pkg).appendString("/").appendString(pkg).returnWithString(".json"), packagedir.makeCopy().appendString("/").appendString(idString).returnWithString("/kitten.json"));
+                    processpackage.process(pkg, root, idString);
                 }
             } else {
                 printf("Error: malformed kitten.json");
