@@ -257,7 +257,11 @@ function replaceLocalImports(filename: CString, package: CString): Void {
                     while line[i++] != c'\n' {
                         length++;
                     }
-                    newImport.appendCharPtr(subString(line, 7, length - 1), length);
+                    var appendStart: Int = 7;  // `i` `m` `p` `o` `r` `t` ` `
+                    if strstr(line, "src.") != null {
+                        appendStart += 4;  // `s` `r` `c` `.`
+                    }
+                    newImport.appendCharPtr(subString(line, appendStart, length - 1), length);
                     printf("new:    %s\n", newImport.toString());
                     fprintf(newfile, "%s", newImport.toString());
                 }
