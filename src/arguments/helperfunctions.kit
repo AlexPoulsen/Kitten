@@ -1,0 +1,123 @@
+include "ctype.h";
+import kit.map;
+
+
+/**
+ * Appends two strings
+ */
+function strAdd(one: CString, two: CString) {
+    var out = malloc(one.length + two.length + 1);
+    strcpy(out, one);
+    strcat(out, two);
+    return out;
+}
+
+
+/**
+ * Converts char attay to string
+ */
+function chr2str(c: CArray[Char], length: Int): CString {
+    var out: CString = malloc((length + 1) * sizeof(Char));
+    strncpy(out, c, length + 1);
+    out[length + 1] = c'\0';
+    return out;
+}
+
+
+/**
+ * Converts char pointer to string
+ */
+function chrPtr2str(c: Ptr[Char], length: Int = -1): CString {
+    if length == -1 {
+        length = strlen(c);
+    }
+    var out: CString = malloc((length + 1) * sizeof(Char));
+    strncpy(out, c, length + 1);
+    out[length + 1] = c'\0';
+    return out;
+}
+
+
+// function str2chr(s: CString): Ptr[CArray[Char]] {
+//     var out: CArray[Char];
+//     sprintf(out, "%s", s);
+//     return out;
+// }
+
+
+function lowercase(s: CString): CString {
+    var c: CArray[Char, 40];
+    sprintf(c, "%s", s);
+    // var c: CArray[Char] = *str2chr(s);
+    for i in 0 ... s.length + 1 {
+        if isalpha(c[i]) != 0 {
+            c[i] = tolower(c[i]);
+        }
+    }
+    // var out: CString = malloc((s.length + 1) * sizeof(Char));
+    // strncpy(out, c, c.length + 1);
+    // out[s.length + 1] = c'\0';
+    return chr2str(c, s.length);
+}
+
+
+function str2bool(s: CString): Bool {
+    if s == null {
+        return false;
+    }
+    s = lowercase(s);
+    match s {
+        "true" => return true;
+        "tru" => return true;
+        "tr" => return true;
+        "t" => return true;
+        "yes" => return true;
+        "ye" => return true;
+        "y" => return true;
+        "1" => return true;
+        "false" => return false;
+        "fals" => return false;
+        "fal" => return false;
+        "fa" => return false;
+        "f" => return false;
+        "no" => return false;
+        "n" => return false;
+        "nah" => return false;
+        "na" => return false;
+        "0" => return false;
+        default => return false;
+    }
+}
+
+
+function str2int(s: CString): Int {
+    if s == null {
+        return 0;
+    }
+    var p: Ptr[Char] = s;
+    // errno = 0;
+    var val = strtoll(s, &p, 10);
+    // if (errno != 0) {
+    //     printf("conversion failed");
+    //     return 199199199199;
+    // }
+    // if (s == p) {
+    //     printf("conversion failed (no characters consumed)");
+    //     return 919919919919;
+    // }
+    // if (*p != 0) {
+    //     printf("conversion failed (trailing data)");
+    //     return 991991991991;
+    // }
+    return val;
+}
+
+
+var thisWasSupposedToBeOptional: Ptr[Ptr[Char]];
+
+function str2float(s: CString): Float {
+    if s == null {
+        return 0.0;
+    }
+    return strtod(s, &thisWasSupposedToBeOptional);
+}

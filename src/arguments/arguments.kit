@@ -1,0 +1,188 @@
+import kit.map;
+import arguments.helperfunctions;
+import arguments.choice;
+import arguments.argument;
+import kitten.xs_Rounding;
+import arguments.handler;
+
+
+struct Arguments {
+    var args: Vector[Argument];
+    var mapS: Map[Char, Int];  // gets a lookup value into the args vector
+    var mapL: Map[CString, Int];  // gets a lookup value into the args vector
+    // var funcExtraArgs: function (Choice, Argument, Arguments) -> Void;
+    var handler: Box[Handler];
+
+    static function new(handler: Box[Handler]) {
+        return struct Self {
+            args: Vector.new(10),
+            mapS: Map.new(10),
+            mapL: Map.new(10),
+            handler
+        };
+    }
+
+    function add(shortName: Char = c'_',
+                longName: CString = "__",
+                defaultValue: Choice = Choice.newInt(0),
+                info: CString = "",
+                needsValue: Int = no_argument,
+                // func: function (Choice, Argument, Arguments) -> Void,
+                flag: Ptr[Int] = &defaultFlag,
+                flagVal: Int = 0) {
+        // printf("---- add() %d\n", needsValue);
+        this.mapS.put(shortName, this.args.length);
+        this.mapL.put(longName, this.args.length);
+        this.args.push(Argument.new(shortName,
+                                    longName,
+                                    defaultValue,
+                                    info,
+                                    needsValue,
+                                    flag,
+                                    flagVal,
+                                    // func,
+                                    this.handler));
+        // printf("---- add() (query) %d\n", this.args[this.args.length - 1].needsValue);
+    }
+
+    inline function printSep() {
+        printf("----------------------------------------\n");
+    }
+
+    function printOption() {
+        for n in this.args {
+            n.printOption();
+            n.printDefault();
+        }
+    }
+
+    function printInfo() {
+        for n in this.args {
+            n.printInfo();
+        }
+    }
+
+    function printAll() {
+        for n in this.args {
+            printf("+---------+-----------------------------\n| ");
+            n.printInfo();
+            printf("+---------+-----------------------------\n");
+            n.printOption();
+            n.printDefault();
+        }
+        printf("+---------+-----------------------------\n");
+    }
+
+    function getL(s: CString): Argument {
+        if this.mapL.exists(s) {
+            return this.args[this.mapL[s]];
+        } else {
+            printf("No matching argument found `%s`.\n", s);
+            var out: Argument = Argument.new(c'_', "__", Choice.new(), "", no_argument, &defaultFlag, 0, DefaultHandler.new());
+            out.initialized = false;
+            return out;
+        }
+    }
+
+    function getS(c: Char): Argument {
+        if this.mapS.exists(c) {
+            return this.args[this.mapS[c]];
+        } else {
+            printf("No matching argument found for `%c`.\n", c);
+            var out: Argument = Argument.new(c'_', "__", Choice.new(), "", no_argument, &defaultFlag, 0, DefaultHandler.new());
+            out.initialized = false;
+            return out;
+        }
+    }
+
+    function callL(s: CString): Void {
+        // printf("callL: %s ", s);
+        if this.mapL.exists(s) {
+            var arg: Argument = this.args[this.mapL[s]];
+            // printf("callL: ");
+            // arg.currentValue.print();
+            arg.call(arg.currentValue, this);
+        } else {
+            printf("`callL` failed, no argument exists for ");
+            printf("%s\n", s);
+        }
+    }
+
+    function callS(c: Char): Void {
+        if this.mapS.exists(c) {
+            var arg: Argument = this.args[this.mapS[c]];
+            arg.call(arg.currentValue, this);
+        } else {
+            printf("`callS` failed, no argument exists for ");
+            printf("%c\n", c);
+        }
+    }
+
+    function process(argc: Int, argv: Ptr[Ptr[Char]]): Void {
+        // printf("arguments process\n");
+        var argcCache: Int = argc;
+        var str: CString;
+        var arg: Argument;
+        var value: CString;
+        var skip: Bool = false;
+        var valuestr: CString;
+        for n in 0 ... argcCache + 1 {  // loop through argv
+            if skip {
+                skip = false;
+                continue;
+            }
+            // printf("[%d]\n", n);
+            // printf("%s\n", (*(argv + n)));
+            if (*(argv + n))[0] == c'-' {
+                if (*(argv + n))[1] == c'-' {  // --arg
+                    // printf("(--) %s ", (*(argv + n)) + 2);
+                    str = ((*(argv + n)) + 2): CString;
+                    // printf("(%s)\n", str);
+                    arg = this.getL(str);
+                    if arg.initialized {
+                        // for n in 0 ... this.args.length {
+                        //     printf("in proc %s, %c\n", this.args[n].longName, this.args[n].shortName);
+                        // }
+                        // argcCache--;
+                        skip = true;
+                        value = (*(argv + n + 1));
+                        // printf("%s", value);
+                        arg.setValueFromString(value);
+                        // printf("--");
+                        // arg.currentValue.print();
+                        this.args[this.mapL[str]] = arg;
+                        this.callL(str);
+                    }
+                } else {  // -a
+                    // printf("(-) %s ", (*(argv + n)) + 1);
+                    str = ((*(argv + n)) + 1): CString;
+                    var len: Int = strlen(str);
+                    if len > 1 {
+                        for n in 0 ... len {
+                            // printf("(%c)\n", str[n]);
+                            this.callS(str[n]);
+                        }
+                    } else {
+                        // printf("(%c)\n", str[0]);
+                        arg = this.getS(str[0]);
+                        if arg.initialized {
+                            // argcCache--;
+                            skip = true;
+                            value = (*(argv + n + 1));
+                            // printf("%s", value);
+                            arg.setValueFromString(value);
+                            // printf("-");
+                            // arg.currentValue.print();
+                            this.args[this.mapS[str[0]]] = arg;
+                            this.callS(str[0]);
+                        }
+                    }
+                }
+            } else {
+                if n > 0 {
+                    this.handler.extra(Choice.newStr(*(argv + n)), this);
+                }
+            }
+        }
+    }
+}

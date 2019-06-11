@@ -1,0 +1,93 @@
+import kit.map;
+import arguments.helperfunctions;
+import arguments.handler;
+
+
+enum ChoiceWhich {
+    INT;
+    STR;
+    BOOL;
+    FLOAT;
+    NONE;
+}
+
+/**
+ * Holds values of different types with an enum to store which is the type it holds, allowing for easy deconstruction.
+ */
+struct Choice {
+    var intVal: Int;
+    var strVal: CString;
+    var boolVal: Bool;
+    var floatVal: Float;
+    var which: ChoiceWhich = ChoiceWhich.NONE;
+
+    static function newInt(val: Int) {
+        return struct Self {
+            intVal: val,
+            strVal: "",
+            boolVal: false,
+            floatVal: 0.0,
+            which: ChoiceWhich.INT
+        };
+    }
+
+    static function newStr(val: CString) {
+        return struct Self {
+            intVal: 0,
+            strVal: val,
+            boolVal: false,
+            floatVal: 0.0,
+            which: ChoiceWhich.STR
+        };
+    }
+
+    static function newBool(val: Bool) {
+        return struct Self {
+            intVal: 0,
+            strVal: "",
+            boolVal: val,
+            floatVal: 0.0,
+            which: ChoiceWhich.BOOL
+        };
+    }
+
+    static function newFloat(val: Float) {
+        return struct Self {
+            intVal: 0,
+            strVal: "",
+            boolVal: false,
+            floatVal: val,
+            which: ChoiceWhich.FLOAT
+        };
+    }
+
+    static function new() {
+        return struct Self {
+            intVal: 0,
+            strVal: "",
+            boolVal: false,
+            floatVal: 0.0,
+            which: ChoiceWhich.NONE
+        };
+    }
+
+    function printLn() {
+        match this.which {
+            INT => printf("%d\n", this.intVal);
+            STR => printf("%s\n", this.strVal);
+            BOOL => printf("%s\n", if this.boolVal then "true" else "false");
+            FLOAT => printf("%f\n", this.floatVal);
+            NONE => printf("No value\n");
+        }
+    }
+
+    function print() {
+        match this.which {
+            INT => printf("%d", this.intVal);
+            STR => printf("%s", this.strVal);
+            BOOL => printf("%s", if this.boolVal then "true" else "false");
+            FLOAT => printf("%f", this.floatVal);
+            NONE => printf("No value");
+        }
+    }
+}

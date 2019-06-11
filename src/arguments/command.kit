@@ -1,0 +1,95 @@
+import kit.map;
+import arguments.helperfunctions;
+import arguments.choice;
+import arguments.argument;
+import arguments.arguments;
+import arguments.handler;
+
+
+struct Command {
+    var sub: Vector[Command];
+    var args: Arguments;
+    const command: CString = "";
+    var map: Map[CString, Int];  // gets a lookup value into the sub vector
+    // var funcNoArgs: function (Choice, Argument, Arguments) -> Void;
+    // var funcEnd: function (Choice, Argument, Arguments) -> Void;
+    var handler: Box[Handler];
+
+    static function new(arguments: Arguments
+                        // , funcNoArgs: function (Choice, Argument, Arguments) -> Void = arguments.argument.defaultHandler,
+                        //   funcEnd: function (Choice, Argument, Arguments) -> Void = arguments.argument.defaultHandler,
+                        //   handler: Box[Handler]
+                        ) {
+        return struct Self {
+            sub: Vector.new(4),
+            args: arguments,
+            command: "",
+            map: Map.new(4),
+            // funcNoArgs,
+            // funcEnd,
+            handler: arguments.handler
+        };
+    }
+
+    private static function subNew(command: CString,
+                                   arguments: Arguments,
+                                   // funcNoArgs: function (Choice, Argument, Arguments) -> Void = arguments.argument.defaultHandler,
+                                   // funcEnd: function (Choice, Argument, Arguments) -> Void = arguments.argument.defaultHandler
+                                   handler: Box[Handler]) {
+        return struct Self {
+            sub: Vector.new(4),
+            args: arguments,
+            command,
+            map: Map.new(4),
+            // funcNoArgs,
+            // funcEnd,
+            handler
+        };
+    }
+
+    function addArg(shortName: Char = c'_',
+                    longName: CString = "__",
+                    defaultValue: Choice = Choice.newInt(0),
+                    info: CString = "",
+                    needsValue: Int = no_argument,
+                    flag: Ptr[Int] = &defaultFlag,
+                    flagVal: Int = 0) {
+        this.args.add(shortName,
+                      longName,
+                      defaultValue,
+                      info,
+                      needsValue,
+                      flag,
+                      flagVal);
+    }
+
+    function addSubcommand(command: CString,
+                           arguments: Arguments
+                           // , funcNoArgs: function (Choice, Argument, Arguments) -> Void = arguments.argument.defaultHandler,
+                           //   handler: Box[Handler]
+                           ) {
+        this.map.put(command, this.sub.length);
+        this.sub.push(Command.subNew(command, arguments, arguments.handler));
+    }
+
+    function getSubcommand(command: CString): Command {
+        return this.sub[this.map[command]];
+    }
+
+    function process(argc: Int, argv: Ptr[Ptr[Char]]): Void {
+        // printf("command process\n");
+        // printf("{{%s}}\n", argv[1]);
+        if argv[1] != null {
+            if this.map.exists(argv[1]) {  // found matching subcommand
+                // printf("found matching subcommand\n");
+                this.getSubcommand(argv[1]).process(argc - 1, argv + 1);  // recurse with subcommand
+            } else {  // found no matching subcommand
+                // printf("found no matching subcommand\n");
+                this.args.process(argc - 1, argv);  // call process on `Arguments` instance
+                this.handler.end(this);
+            }
+        } else {
+            this.handler.nothing(this);
+        }
+    }
+}

@@ -1,0 +1,109 @@
+import kit.map;
+import arguments.helperfunctions;
+import arguments.choice;
+import arguments.arguments;
+import arguments.handler;
+
+
+var defaultFlag = 0;
+const no_argument: Int = 0;
+const required_argument: Int = 1;
+const optional_argument: Int = 2;
+
+
+struct Argument {
+    const shortName: Char = c'_';  // used with -n
+    const longName: CString = "__";  // used with --name
+    const defaultValue: Choice = Choice.new();  // used with --name
+    var currentValue: Choice;
+    var info: CString;
+    var needsValue: Int;
+    var flag: Ptr[Int] = &defaultFlag;
+    var flagVal: Int = 0;
+    // var func: function(Choice, Argument, Arguments) -> Void;
+    var handler: Box[Handler];
+    var initialized: Bool = false;
+
+    static function new(shortName: Char = c'_',
+                        longName: CString = "__",
+                        defaultValue: Choice = Choice.new(),
+                        info: CString = "",
+                        needsValue: Int = no_argument,
+                        flag: Ptr[Int] = &defaultFlag,
+                        flagVal: Int = 0,
+                        // func: function(Choice, Argument, Arguments) -> Void = defaultHandler,
+                        handler: Box[Handler]) {
+        // printf("---- ---- new() %d\n", needsValue);
+        return struct Self {
+            shortName,
+            longName,
+            defaultValue,
+            currentValue: Choice.new(),
+            info,
+            needsValue,
+            flag,
+            flagVal,
+            // func,
+            handler,
+            initialized: true
+        };
+    }
+
+    function printDefault() {
+        if this.needsValue != no_argument {
+            if this.needsValue == optional_argument {
+                match this.defaultValue.which {
+                    INT =>   printf("| Integer | Default: %d\n", this.defaultValue.intVal);
+                    STR =>   printf("| String  | Default: %s\n", this.defaultValue.strVal);
+                    BOOL =>  printf("| Boolean | Default: %s\n", if this.defaultValue.boolVal then "true" else "false");
+                    FLOAT => printf("| Float   | Default: %f\n", this.defaultValue.floatVal);
+                }
+            } else {
+                match this.defaultValue.which {
+                    INT =>   printf("| Integer | Required\n");
+                    STR =>   printf("| String  | Required\n");
+                    BOOL =>  printf("| Boolean | Required\n");
+                    FLOAT => printf("| Float   | Required\n");
+                }
+            }
+        }
+    }
+
+    inline function printSep() {
+        printf("----------------------------------------\n");
+    }
+
+    function printInfo() {
+        printf("%s\n", this.info);
+    }
+
+    function printOption() {
+        printf("| -%c      | --%s\n", this.shortName, this.longName);
+    }
+
+    function printAll() {
+        this.printInfo();
+        this.printSep();
+        this.printOption();
+        this.printDefault();
+    }
+
+    function call(value: Choice = Choice.new(), args: Arguments): Void {
+        if value.which == ChoiceWhich.NONE {
+            value = this.currentValue;
+        }
+        this.handler.arg(value, this, args);
+    }
+
+    function setValueFromString(s: CString) {
+        // printf("setValueFromString\n");
+        match this.defaultValue.which {
+            INT => this.currentValue = Choice.newInt(str2int(s));
+            STR => this.currentValue = Choice.newStr(s);
+            BOOL => this.currentValue = Choice.newBool(str2bool(s));
+            FLOAT => this.currentValue = Choice.newFloat(str2float(s));
+            NONE => printf("ERROR: `this.defaultValue.which` is set to NONE\n");
+        }
+        // this.currentValue.print();
+    }
+}
