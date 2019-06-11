@@ -1,5 +1,7 @@
 import arguments.*;
 import stringbuilder;
+import getpackage;
+include "signal.h";
 
 
 struct InstallHandler {
@@ -37,9 +39,10 @@ implement Handler for InstallHandler {
             printf("%s, ", this.packages[n]);
         }
         printf("%s\n", this.packages[this.packages.length - 1]);
-        // for n in 0 ... this.packages.length {
-        //     installPackage(this.packages[n]);
-        // }
+        updatePackageJSONs(this.root.makeCopy());
+        for n in 0 ... this.packages.length {
+            installPackage(this.packages[n], this.root.makeCopy());
+        }
     }
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
@@ -95,9 +98,9 @@ implement Handler for UninstallHandler {
             printf("%s, ", this.packages[n]);
         }
         printf("%s\n", this.packages[this.packages.length - 1]);
-        // for n in 0 ... this.packages.length {
-        //     installPackage(this.packages[n]);
-        // }
+        for n in 0 ... this.packages.length {
+            uninstallPackage(this.packages[n], this.root.makeCopy());
+        }
     }
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
@@ -154,12 +157,13 @@ implement Handler for UpdateHandler {
                 printf("%s, ", this.packages[n]);
             }
             printf("%s\n", this.packages[this.packages.length - 1]);
+            updatePackageJSONs(this.root.makeCopy());
+            for n in 0 ... this.packages.length {
+                updatePackage(this.packages[n], this.root.makeCopy());
+            }
         } else {
             printf("`kitten update package` is used for updating packages. Use `kitten upgrade` to update Kitten.");
         }
-        // for n in 0 ... this.packages.length {
-        //     installPackage(this.packages[n]);
-        // }
     }
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
@@ -322,6 +326,13 @@ implement Handler for PlainHandler {
 
 
 function main(argc: Int, argv: Ptr[Ptr[Char]]) {
+    // var sigs: sigset_t;
+
+    // sigemptyset(&sigs);
+    // sigaddset(&sigs, SIGTTIN);
+    // sigaddset(&sigs, SIGTTOU);
+    // sigprocmask(SIG_BLOCK, &sigs, 0);
+
     var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
     var installH:   InstallHandler   = InstallHandler.new(   root.makeCopy());
     var uninstallH: UninstallHandler = UninstallHandler.new( root.makeCopy());
