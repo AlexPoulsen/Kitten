@@ -290,7 +290,11 @@ implement Handler for PlainHandler {
 
     function end(cmd: Command): Void {
         if this.hasBeenCalled {
-            printf("`kitten install mypackage` to install a package\n`kitten uninstall mypackage` to uninstall a package\n`kitten update mypackage` to update a package\n`kitten upgrade` to update Kitten\n`kitten help command` to get help for a command\n");
+            printf("`kitten install mypackage` to install a package\n");
+            printf("`kitten uninstall mypackage` to uninstall a package\n");
+            printf("`kitten update mypackage` to update a package\n");
+            printf("`kitten upgrade` to update Kitten\n");
+            printf("`kitten help command` to get help for a command\n");
         }
     }
 
