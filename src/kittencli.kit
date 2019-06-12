@@ -291,10 +291,20 @@ implement Handler for HelpHandler {
 
 struct PlainHandler {
     var hasBeenCalled: Bool = false;
+    var commands: Vector[CString];
+    var calledCommand: CString;
+    var restOfCall: StringBuilder = StringBuilder.new(30);
 
     static function new(): PlainHandler {
+        var commandVec: Vector[CString]  = Vector.new(10);
+            commandVec.push("install");
+            commandVec.push("uninstall");
+            commandVec.push("update");
+            commandVec.push("upgrade");
+            commandVec.push("help");
         return struct Self {
-            hasBeenCalled: false
+            hasBeenCalled: false,
+            commands: commandVec
         };
     }
 }
@@ -306,21 +316,75 @@ implement Handler for PlainHandler {
     }
 
     function extra(choice: Choice, args: Arguments): Void {
-        this.hasBeenCalled = true;
+        if !this.hasBeenCalled {
+            this.calledCommand = choice.strVal;
+            this.hasBeenCalled = true;
+        } else {
+            this.restOfCall.appendString(choice.strVal);
+        }
     }
 
     function end(cmd: Command): Void {
         if this.hasBeenCalled {
-            printf("`kitten install mypackage` to install a package\n");
-            printf("`kitten uninstall mypackage` to uninstall a package\n");
-            printf("`kitten update mypackage` to update a package\n");
-            printf("`kitten upgrade` to update Kitten\n");
-            printf("`kitten help command` to get help for a command\n");
+            var distancesStr: Array[CString] = Array.new(this.commands.length + 2);
+            var distancesInt: Array[Uint] = Array.new(this.commands.length + 2);
+            var counter: Int = 0;
+            var min: Int = 0;
+            var min2: Int = 0;
+            for cmd in this.commands {
+                distancesStr[counter] = cmd;
+                distancesInt[counter] = levenshtein(cmd, this.calledCommand);
+                counter++;
+            }
+            counter: Int = 0;
+            for dist in distancesInt {
+                if dist > 0 {
+                    if dist < distancesInt[min] {
+                        min = counter;
+                    }
+                    counter++;
+                }
+            }
+            // for d in 0 ... counter {
+            //     printf("%s %d\n", distancesStr[d], distancesInt[d]);
+            // }
+            // printf("%d, %d\n", min);
+            // if min == min2 {
+            //     printf("Did you mean `%s`?\n\n", this.commands[min]);
+            // } else {
+            //     printf("Did you mean `%s` or `%s`?\n\n", this.commands[min], this.commands[min2]);
+            // }
+            printf("Did you mean one of these?\n");
+            for d in 0 ... counter {
+                if distancesInt[d] < distancesInt[min] + 2 {
+                    printf("`kitten %s %s`\n", distancesStr[d], this.restOfCall.toString());
+                }
+            }
+            printf("\n----------------------------------------------------------------------\n");
+            printf("`kitten install mypackage package2`   installs one or more packages.\n");
+            printf("`kitten uninstall mypackage package2` uninstalls one or more packages.\n");
+            printf("`kitten update mypackage package2`    updates one or more packages.\n");
+            printf("`kitten upgrade`                      updates Kitten.\n");
+            printf("`kitten help command`                 gets help with a command.\n");
         }
     }
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
         this.hasBeenCalled = true;
+        this.restOfCall.appendString(" --").appendString(arg.longName).appendString(" ");
+        var temp: Ptr[Char] = *(mallocator.calloc(100)): Ptr[Char];
+        match choice.which {
+            INT => snprintf(temp, 100, "%d", choice.intVal);
+            STR => snprintf(temp, 100, "%s", choice.strVal);
+            BOOL => snprintf(temp, 100, "%s", if choice.boolVal then "true" else "false");
+            FLOAT => snprintf(temp, 100, "%f", choice.floatVal);
+            NONE => sprintf(temp, "No value");
+        }
+        this.restOfCall.appendCharPtr(temp, 100);
+    }
+}
+
+
 function min3(a: Int, b: Int, c: Int): Int {
     return if a < b then (if a < c then a else c) else (if b < c then b else c);
 }
