@@ -18,6 +18,18 @@ function main() {
 }
 
 
+function checkPackage(pkg: CString, root: StringBuilder) {
+    var path1: StringBuilder = root.makeCopy().appendString("/kitten/").appendString(pkg);
+    var path2: StringBuilder = root.makeCopy().appendString("/kitten/").appendString(pkg);
+    var fp1 = fopen(path1.returnWithString("/"), "rb");
+    var fp2 = fopen(path2.returnWithString(".kit"), "rb");
+    var out: Bool = fp1 != null || fp2 != null;
+    fclose(fp1);
+    fclose(fp2);
+    return out;
+}
+
+
 function updatePackageJSONs(root: StringBuilder) {
     var cwd: Ptr[Char] = malloc(${PATH_MAX: Int} * sizeof(Char));
     if (getcwd(cwd, ${PATH_MAX: Int} * sizeof(Char)) != null) {
@@ -94,6 +106,30 @@ function installPackage(pkg: CString, root: StringBuilder) {
                     idIsString = true;
                 } else {
                     printf("Error: no `id` string");
+                }
+                var versions: Ptr[json_t] = json_object_get(jsonData, "versions");
+                if versions.type == JSON_ARRAY {
+                    var versionsSize: Int = json_array_size(versions);
+                    for ver in 0 ... versionsSize {
+                        var deps: Ptr[json_t] = json_object_get(json_array_get(versions, ver), "deps");
+                        if deps.type == JSON_ARRAY {
+                            var depsSize: Int = json_array_size(deps);
+                            for dep in 0 ... depsSize {
+                                var toInstall: CString = json_string_value(json_array_get(deps, dep));
+                                if checkPackage(toInstall, root.makeCopy()) {
+                                    updatePackage(toInstall, root.makeCopy());
+                                } else {
+                                    installPackage(toInstall, root.makeCopy());
+                                }
+                            }
+                        } else {
+                            printf("Error: no `deps` array");
+                            json_decref(jsonData);
+                            return 1;
+                        }
+                    }
+                } else {
+                    printf("Error: no `versions` array");
                 }
                 if idIsString && linkIsString {
                     const linkString: CString = json_string_value(link);
@@ -182,6 +218,30 @@ function updatePackage(pkg: CString, root: StringBuilder) {
                     idIsString = true;
                 } else {
                     printf("Error: no `id` string");
+                }
+                var versions: Ptr[json_t] = json_object_get(jsonData, "versions");
+                if versions.type == JSON_ARRAY {
+                    var versionsSize: Int = json_array_size(versions);
+                    for ver in 0 ... versionsSize {
+                        var deps: Ptr[json_t] = json_object_get(json_array_get(versions, ver), "deps");
+                        if deps.type == JSON_ARRAY {
+                            var depsSize: Int = json_array_size(deps);
+                            for dep in 0 ... depsSize {
+                                var toInstall: CString = json_string_value(json_array_get(deps, dep));
+                                if checkPackage(toInstall, root.makeCopy()) {
+                                    updatePackage(toInstall, root.makeCopy());
+                                } else {
+                                    installPackage(toInstall, root.makeCopy());
+                                }
+                            }
+                        } else {
+                            printf("Error: no `deps` array");
+                            json_decref(jsonData);
+                            return 1;
+                        }
+                    }
+                } else {
+                    printf("Error: no `versions` array");
                 }
                 if idIsString && linkIsString {
                     const linkString: CString = json_string_value(link);
