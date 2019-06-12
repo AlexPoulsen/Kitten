@@ -321,7 +321,42 @@ implement Handler for PlainHandler {
 
     function arg(choice: Choice, arg: Argument, args: Arguments): Void {
         this.hasBeenCalled = true;
+function min3(a: Int, b: Int, c: Int): Int {
+    return if a < b then (if a < c then a else c) else (if b < c then b else c);
+}
+
+function levenshtein(s1: Ptr[Char], s2: Ptr[Char]): Int {
+    var s1len: Uint = strlen(s1);
+    var s2len: Uint = strlen(s2);
+    var x: Uint;
+    var y: Uint;
+    var lastdiag: Uint;
+    var olddiag: Uint;
+    var column: Array[Uint] = Array.new(s1len + 1);
+    for y in 1 ... s1len + 1 {
+        column[y] = y;
     }
+    // for c in column {
+    //     printf("%d ", c);
+    // }
+    // printf("\n");
+    for x in 1 ... s2len + 1 {
+        column[0] = x;
+        // printf("%d  ", x);
+        lastdiag = x - 1;
+        for y in 1 ... s1len + 1 {
+            olddiag = column[y];
+            column[y] = min3(column[y] + 1, column[y - 1] + 1, lastdiag + (if s1[y - 1] == s2[x - 1] then 0 else 1));
+            lastdiag = olddiag;
+            // printf("(%d,%d,%d min %d)  ", column[y] + 1, column[y - 1] + 1, lastdiag + (if s1[y - 1] == s2[x - 1] then 0 else 1), column[y]);
+        }
+        // printf("\n");
+    }
+    // for c in column {
+    //     printf("%d ", c);
+    // }
+    // printf("\n");
+    return(column[s1len]);
 }
 
 
