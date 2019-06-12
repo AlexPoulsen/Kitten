@@ -238,10 +238,18 @@ implement Handler for UpgradeHandler {
 
 struct HelpHandler {
     var commands: Vector[CString];
+    var kittenCommands: Vector[CString];
 
     static function new(): HelpHandler {
+        var commandVec: Vector[CString]  = Vector.new(10);
+            commandVec.push("install");
+            commandVec.push("uninstall");
+            commandVec.push("update");
+            commandVec.push("upgrade");
+            commandVec.push("help");
         return struct Self {
-            commands: Vector.new(10)
+            commands: Vector.new(10),
+            kittenCommands: commandVec
         };
     }
 }
@@ -277,8 +285,72 @@ implement Handler for HelpHandler {
                 "help" => {
                     printf("`kitten help command` gets help with a command.\n");
                 }
+                "all" => {
+                    printf("`kitten install mypackage package2`   installs one or more packages.\n");
+                    printf("`kitten uninstall mypackage package2` uninstalls one or more packages.\n");
+                    printf("`kitten update mypackage package2`    updates one or more packages.\n");
+                    printf("`kitten upgrade`                      updates Kitten.\n");
+                    printf("`kitten help command`                 gets help with a command.\n");
+                }
                 default => {
+                    var distancesStr: Array[CString] = Array.new(this.kittenCommands.length + 2);
+                    var distancesInt: Array[Uint] = Array.new(this.kittenCommands.length + 2);
+                    var counter: Int = 0;
+                    var min: Int = 0;
+                    var min2: Int = 0;
+                    for cmd in this.kittenCommands {
+                        distancesStr[counter] = cmd;
+                        distancesInt[counter] = levenshtein(cmd, this.commands[n]);
+                        counter++;
+                    }
+                    counter: Int = 0;
+                    for dist in distancesInt {
+                        if dist > 0 {
+                            if dist < distancesInt[min] {
+                                min = counter;
+                            }
+                            counter++;
+                        }
+                    }
+                    // for d in 0 ... counter {
+                    //     printf("%s %d\n", distancesStr[d], distancesInt[d]);
+                    // }
+                    // printf("%d, %d\n", min);
+                    // if min == min2 {
+                    //     printf("Did you mean `%s`?\n\n", this.commands[min]);
+                    // } else {
+                    //     printf("Did you mean `%s` or `%s`?\n\n", this.commands[min], this.commands[min2]);
+                    // }
                     printf("`%s` is not a valid Kitten command.\n", this.commands[n]);
+                    printf("Did you mean one of these?\n");
+                    for d in 0 ... counter {
+                        if distancesInt[d] < distancesInt[min] + 2 {
+                            match distancesStr[d] {
+                                "install" => {
+                                    printf("`kitten install mypackage package2` installs one or more packages.\n");
+                                }
+                                "uninstall" => {
+                                    printf("`kitten uninstall mypackage package2` uninstalls one or more packages.\n");
+                                }
+                                "update" => {
+                                    printf("`kitten update mypackage package2` updates one or more packages.\n");
+                                }
+                                "upgrade" => {
+                                    printf("`kitten upgrade` updates Kitten.\n");
+                                }
+                                "help" => {
+                                    printf("`kitten help command` gets help with a command.\n");
+                                }
+                                "all" => {
+                                    printf("`kitten install mypackage package2`   installs one or more packages.\n");
+                                    printf("`kitten uninstall mypackage package2` uninstalls one or more packages.\n");
+                                    printf("`kitten update mypackage package2`    updates one or more packages.\n");
+                                    printf("`kitten upgrade`                      updates Kitten.\n");
+                                    printf("`kitten help command`                 gets help with a command.\n");
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
