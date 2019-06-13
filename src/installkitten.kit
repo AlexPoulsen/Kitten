@@ -13,7 +13,6 @@ function main() {
     printf("Enter folder Kit's root prelude and standard library is in with no slash after the directory.\nExample: If the root prelude path is `/usr/local/lib/kit/prelude.kit`, enter `/usr/local/lib/kit`.\nKit root directory: ");
     fgets(rootInput, 300, stdin);
     var root: StringBuilder = StringBuilder.newFromString(rootInput);
-    var replace: Int = 0;
     if root.endsWith(c'\n') {
         root.removeChars(1);
     }
@@ -36,4 +35,50 @@ function main() {
     // printf("%s", settingsStr);
     fclose(fp);
     json_decref(settingsJSON);
+    var symlinkInput: Ptr[Char] = *(mallocator.calloc(300)): Ptr[Char];
+    printf("Enter folder on the shell PATH variable to symlink Kitten to: ");
+    fgets(symlinkInput, 300, stdin);
+    var symlinkDir: StringBuilder = StringBuilder.newFromString(symlinkInput);
+    if symlinkDir.endsWith(c'\n') {
+        symlinkDir.removeChars(1);
+    }
+    if symlinkDir.endsWith(c'/') {
+        symlinkDir.removeChars(1);
+    }
+    var errno;
+    var removeReturn: Int = remove(symlinkDir.returnWithString("/kitten"));
+    if removeReturn != 0 {
+        perror("Error in symlink deletion");
+        // printf("%d\n", errno);
+        // printf("%d\n", EACCES);
+        // printf("%d\n", EEXIST);
+        // printf("%d\n", EIO);
+        // printf("%d\n", ELOOP);
+        // printf("%d\n", ENAMETOOLONG);
+        // printf("%d\n", ENOENT);
+        // printf("%d\n", ENOSPC);
+        // printf("%d\n", ENOTDIR);
+        // printf("%d\n", EROFS);
+        // printf("%d\n", ELOOP);
+        // printf("%d\n", ENAMETOOLONG);
+        errno = 0;
+    }
+    var symlinkReturn: Int = symlink(StringBuilder.newFromString(kittenInstallDir).returnWithString("kitten"), symlinkDir.returnWithString("/kitten"));
+    if symlinkReturn != 0 {
+        perror("Error in symlink creation");
+        printf("%s -> %s\n", StringBuilder.newFromString(kittenInstallDir).returnWithString("kitten"), symlinkDir.returnWithString("/kitten"));
+        // printf("%d\n", errno);
+        // printf("%d\n", EACCES);
+        // printf("%d\n", EEXIST);
+        // printf("%d\n", EIO);
+        // printf("%d\n", ELOOP);
+        // printf("%d\n", ENAMETOOLONG);
+        // printf("%d\n", ENOENT);
+        // printf("%d\n", ENOSPC);
+        // printf("%d\n", ENOTDIR);
+        // printf("%d\n", EROFS);
+        // printf("%d\n", ELOOP);
+        // printf("%d\n", ENAMETOOLONG);
+        errno = 0;
+    }
 }
