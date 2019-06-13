@@ -441,6 +441,26 @@ struct StringBuilder {
         // printf("(%c == %c) ", this.chars[this.length - offset], c);
         return this.chars[this.length - offset] == c;
     }
+
+    public function removeChars(num: Int = 1) {
+        var offset: Int = 0;
+        var hasPreceedingNull: Bool = false;
+        for n in 0 ... this.length {
+            var checkChar: Char = this.chars[this.length - n];
+            if (checkChar == "\x00"[0]) {
+                hasPreceedingNull = true;
+            }
+            if (checkChar != "\x00"[0]) {
+                offset = n;
+                if hasPreceedingNull {
+                    break;
+                }
+            }
+        }
+        for n in 0 ... num {
+            this.chars[this.length - offset - n] = "\x00"[0];
+        }
+    }
 }
 
 function main(): Void {
