@@ -497,7 +497,7 @@ function levenshtein(s1: Ptr[Char], s2: Ptr[Char]): Int {
 
 
 function main(argc: Int, argv: Ptr[Ptr[Char]]) {
-    var fp: Ptr[FILE] = fopen("kittensettings.json", "r");
+    var fp: Ptr[FILE] = fopen(${kittensettingsjson: CString}, "r");
     var lSize: Int64;
     var buffer: Ptr[Char];
     var jsonData: Ptr[json_t];
@@ -508,7 +508,7 @@ function main(argc: Int, argv: Ptr[Ptr[Char]]) {
     if fp == null {
         perror("Error opening `kittensettings.json`");
     } else {
-        printf("Opened `kittensettings.json` successfully\n");
+        // printf("Opened `kittensettings.json` successfully\n");
         fseek(fp, 0, SEEK_END);
         lSize = ftell(fp);
         rewind(fp);

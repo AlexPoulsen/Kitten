@@ -24,7 +24,7 @@ function main() {
     populateJSONDir(root.makeCopy());
     var kittenInstallDir: CString = root.makeCopy().appendString("/kitten/_kitten/").toString();
     chdir(kittenInstallDir);
-    system("kitc -c -g \"/Users/macbookpro/kitten/src/kittencli.kit\" -l -ljansson -o kitten");
+    system(StringBuilder.newFromString("kitc -c -g \"/Users/macbookpro/kitten/src/kittencli.kit\" -l -ljansson -o kitten -D kittensettingsjson=\"\\\"").appendString(kittenInstallDir).returnWithString("kittensettings.json\\\"\""));
     system(StringBuilder.newFromString("rm -rf ").appendString(kittenInstallDir).appendString("build/").toString());
     var settingsStr: Ptr[Char] = null;
     var settingsJSON: Ptr[json_t] = json_object();
