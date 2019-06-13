@@ -1,0 +1,30 @@
+include "limits.h";
+include "unistd.h";
+include "sys/types.h";
+include "sys/stat.h";
+include "jansson.h";
+include "errno.h";
+import init;
+import stringbuilder;
+
+
+function main() {
+    var rootInput: Ptr[Char] = *(mallocator.calloc(300)): Ptr[Char];
+    printf("Enter folder Kit's root prelude and standard library is in with no slash after the directory.\nExample: If the root prelude path is `/usr/local/lib/kit/prelude.kit`, enter `/usr/local/lib/kit`.\nKit root directory: ");
+    fgets(rootInput, 300, stdin);
+    var root: StringBuilder = StringBuilder.newFromString(rootInput);
+    var replace: Int = 0;
+    if root.endsWith(c'\n') {
+        root.removeChars(1);
+    }
+    if root.endsWith(c'/') {
+        root.removeChars(1);
+    }
+    printf("Using root directory: `%s`\n", root.toString());
+    createDirs(root.makeCopy());
+    populateJSONDir(root.makeCopy());
+    var kittenInstallDir: CString = root.makeCopy().appendString("/kitten/_kitten/").toString();
+    chdir(kittenInstallDir);
+    system("kitc -c -g \"/Users/macbookpro/kitten/src/kittencli.kit\" -l -ljansson -o kitten");
+    system(StringBuilder.newFromString("rm -rf ").appendString(kittenInstallDir).appendString("build/").toString());
+}
