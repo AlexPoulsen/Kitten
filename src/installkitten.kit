@@ -27,4 +27,13 @@ function main() {
     chdir(kittenInstallDir);
     system("kitc -c -g \"/Users/macbookpro/kitten/src/kittencli.kit\" -l -ljansson -o kitten");
     system(StringBuilder.newFromString("rm -rf ").appendString(kittenInstallDir).appendString("build/").toString());
+    var settingsStr: Ptr[Char] = null;
+    var settingsJSON: Ptr[json_t] = json_object();
+    json_object_set_new(settingsJSON, "root", json_string(root.toString()));
+    settingsStr = json_dumps(settingsJSON, ${JSON_INDENT: function (Int) -> Int}(4));
+    var fp: Ptr[FILE] = fopen(StringBuilder.newFromString(kittenInstallDir).appendString("kittensettings.json").toString(), "w");
+    fprintf(fp, "%s", settingsStr);
+    // printf("%s", settingsStr);
+    fclose(fp);
+    json_decref(settingsJSON);
 }
