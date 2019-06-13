@@ -497,46 +497,78 @@ function levenshtein(s1: Ptr[Char], s2: Ptr[Char]): Int {
 
 
 function main(argc: Int, argv: Ptr[Ptr[Char]]) {
-    // var sigs: sigset_t;
+    var fp: Ptr[FILE] = fopen("kittensettings.json", "r");
+    var lSize: Int64;
+    var buffer: Ptr[Char];
+    var jsonData: Ptr[json_t];
+    var jsonError: json_error_t;
+    var run: Bool = false;
+    var root: StringBuilder;
 
-    // sigemptyset(&sigs);
-    // sigaddset(&sigs, SIGTTIN);
-    // sigaddset(&sigs, SIGTTOU);
-    // sigprocmask(SIG_BLOCK, &sigs, 0);
+    if fp == null {
+        perror("Error opening `kittensettings.json`");
+    } else {
+        printf("Opened `kittensettings.json` successfully\n");
+        fseek(fp, 0, SEEK_END);
+        lSize = ftell(fp);
+        rewind(fp);
+        buffer = calloc(1, lSize+1);
+        if 1 != fread(buffer, lSize, 1 , fp) {
+            fclose(fp);
+            free(buffer);
+            fputs("`kittensettings.json` read fails\n", stderr);
+        } else {
+            jsonData = json_loads(buffer, 0, &jsonError);
+            fclose(fp);
+            free(buffer);
+            if jsonData.type == JSON_OBJECT {
+                var jsonData_root: Ptr[json_t] = json_object_get(jsonData, "root");
+                if jsonData_root.type == JSON_STRING {
+                    root = StringBuilder.newFromString(json_string_value(jsonData_root));
+                    run = true;
+                } else {
+                    printf("Error: no root directory in `kittensettings.json`");
+                }
+            }
+        }
+    }
 
-    var root: StringBuilder = StringBuilder.newFromString("/usr/local/lib/kit");
-    var installH:   InstallHandler   = InstallHandler.new(   root.makeCopy());
-    var uninstallH: UninstallHandler = UninstallHandler.new( root.makeCopy());
-    var updateH:    UpdateHandler    = UpdateHandler.new(    root.makeCopy());
-    var upgradeH:   UpgradeHandler   = UpgradeHandler.new(   root.makeCopy());
-    var helpH:      HelpHandler      = HelpHandler.new();
-    var plainH:     PlainHandler     = PlainHandler.new();
+    if run {
+        var installH:   InstallHandler   = InstallHandler.new(   root.makeCopy());
+        var uninstallH: UninstallHandler = UninstallHandler.new( root.makeCopy());
+        var updateH:    UpdateHandler    = UpdateHandler.new(    root.makeCopy());
+        var upgradeH:   UpgradeHandler   = UpgradeHandler.new(   root.makeCopy());
+        var helpH:      HelpHandler      = HelpHandler.new();
+        var plainH:     PlainHandler     = PlainHandler.new();
 
-    var installA:   Arguments        = Arguments.new(installH);
-    installA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
-    installA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+        var installA:   Arguments        = Arguments.new(installH);
+        installA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+        installA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
 
-    var uninstallA: Arguments        = Arguments.new(uninstallH);
-    uninstallA.add( c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
-    uninstallA.add( c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+        var uninstallA: Arguments        = Arguments.new(uninstallH);
+        uninstallA.add( c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+        uninstallA.add( c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
 
-    var updateA:    Arguments        = Arguments.new(updateH);
-    updateA.add(    c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
-    updateA.add(    c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+        var updateA:    Arguments        = Arguments.new(updateH);
+        updateA.add(    c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+        updateA.add(    c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
 
-    var upgradeA:   Arguments        = Arguments.new(upgradeH);
-    upgradeA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
-    upgradeA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
+        var upgradeA:   Arguments        = Arguments.new(upgradeH);
+        upgradeA.add(   c'v', "verbose", Choice.new(), "adds verbose debugging `printf`s",               no_argument);
+        upgradeA.add(   c's', "silent",  Choice.new(), "disables all `printf`s, overrides -v/--verbose", no_argument);
 
-    var helpA:      Arguments        = Arguments.new(helpH);
-    var plainA:     Arguments        = Arguments.new(plainH);
+        var helpA:      Arguments        = Arguments.new(helpH);
+        var plainA:     Arguments        = Arguments.new(plainH);
 
-    var command:    Command          = Command.new(plainA);
-    command.addSubcommand("install",   installA);
-    command.addSubcommand("uninstall", uninstallA);
-    command.addSubcommand("update",    updateA);
-    command.addSubcommand("upgrade",   upgradeA);
-    command.addSubcommand("help",      helpA);
+        var command:    Command          = Command.new(plainA);
+        command.addSubcommand("install",   installA);
+        command.addSubcommand("uninstall", uninstallA);
+        command.addSubcommand("update",    updateA);
+        command.addSubcommand("upgrade",   upgradeA);
+        command.addSubcommand("help",      helpA);
 
-    command.process(argc, argv);
+        command.process(argc, argv);
+    } else {
+        printf("Kitten's `kittensettings.json` is missing or damaged. If you are not able to fix the file, delete the directory containing Kitten and its packages and reinstall.");
+    }
 }
