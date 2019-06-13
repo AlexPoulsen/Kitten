@@ -48,6 +48,11 @@ function createDirs(root: StringBuilder) {
         perror(StringBuilder.newFromString("Creation of `").appendString(root.returnWithString("/_kitten_packages")).appendString("` failed").toString());
     }
     errno = 0;
+    mkdirSuccess = mkdir(root.returnWithString("/_kitten"), 0o777);
+    if mkdirSuccess != 0 {
+        perror(StringBuilder.newFromString("Creation of `").appendString(root.returnWithString("/_kitten")).appendString("` failed").toString());
+    }
+    errno = 0;
 }
 
 
